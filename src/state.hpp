@@ -160,6 +160,8 @@ struct InputState {
     bool pointer_pressed{};
     bool pointer_released{};
     bool pointer_down{};
+    bool camera_drag_down{};
+    int camera_drag_button{};
     bool direct_down{};
     bool additive_down{};
     bool relocate_hq_pressed{};
@@ -170,6 +172,7 @@ struct InputState {
     bool pan_left{};
     bool pan_right{};
     float zoom_delta{};
+    Vec2 camera_pan_delta{};
     Vec2 pointer{};
     Vec2 press_origin{};
     int dispatch_choice{-1};

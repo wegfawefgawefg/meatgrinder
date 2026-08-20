@@ -11,8 +11,9 @@ main menu -> level card -> battle -> defeat/retry
 
 The battlefield is a tile-aligned graph in world space. The camera fits each
 front, eases into place at setup, emphasizes victory, and otherwise moves only
-under player pan and zoom. Captures never steal camera control. Castles, roads,
-troops, and background tiles all share the same coordinate system.
+under player pan and zoom. Middle-drag and Space-left-drag grab the map directly;
+keyboard panning remains available. Captures never steal camera control.
+Castles, roads, troops, and background tiles all share the same coordinate system.
 
 The player can select one node, box-select several, Shift-box to add more, or
 Shift-click to toggle one member of the selection, then issue a destination

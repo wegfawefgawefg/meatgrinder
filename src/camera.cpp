@@ -41,6 +41,14 @@ void step_camera(State& state) {
                               pan_speed * step_seconds;
     camera.target_center.y += static_cast<float>(state.input.pan_down - state.input.pan_up) *
                               pan_speed * step_seconds;
+    const Vec2 dragged{
+        state.input.camera_pan_delta.x / std::max(0.1F, camera.zoom),
+        state.input.camera_pan_delta.y / std::max(0.1F, camera.zoom),
+    };
+    camera.target_center.x -= dragged.x;
+    camera.target_center.y -= dragged.y;
+    camera.center.x -= dragged.x;
+    camera.center.y -= dragged.y;
     if (state.input.zoom_delta != 0.0F) {
         camera.target_zoom *= std::pow(1.12F, state.input.zoom_delta);
         camera.target_zoom = std::clamp(camera.target_zoom, 0.45F, 2.5F);

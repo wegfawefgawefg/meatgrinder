@@ -39,7 +39,8 @@ Controls:
 - Press H, then click an owned node, to relocate your headquarters.
 - Number keys select a commitment: 1 sends one, 2 sends half, and 3 sends all but one.
 - The active commitment applies to immediate orders and is stored in newly assigned rallies.
-- WASD or arrow keys pan; the mouse wheel zooms. Escape pauses or backs out.
+- Middle-drag or Space-left-drag pans the map; WASD and arrow keys also pan.
+- The mouse wheel zooms. Escape pauses or backs out.
 - F1 opens developer tools; F11 toggles fullscreen.
 
 Options select weak, normal, or hard AI difficulty independently of each

@@ -218,6 +218,17 @@ int main() {
     step(state);
     assert(state.dispatch_mode == DispatchMode::all_but_one);
 
+    // verify pointer panning grabs the world at the current zoom
+    state.camera.center = {100.0F, 200.0F};
+    state.camera.target_center = state.camera.center;
+    state.camera.zoom = 2.0F;
+    state.camera.target_zoom = 2.0F;
+    state.input.camera_pan_delta = {20.0F, -10.0F};
+    step_camera(state);
+    assert(state.camera.target_center.x == 90.0F);
+    assert(state.camera.target_center.y == 205.0F);
+    state.input.camera_pan_delta = {};
+
     start_level(state, 3);
     assert(state.match.ai_style == AiStyle::swarm);
     state.mode = Mode::playing;

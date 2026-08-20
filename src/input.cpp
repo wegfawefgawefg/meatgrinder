@@ -23,6 +23,7 @@ Vec2 logical_pointer(SDL_Renderer* renderer, float x, float y) {
 } // namespace
 
 void pump_input(InputState& input, SDL_Renderer* renderer) {
+    const bool* keys = SDL_GetKeyboardState(nullptr);
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         ImGui_ImplSDL3_ProcessEvent(&event);
@@ -48,20 +49,33 @@ void pump_input(InputState& input, SDL_Renderer* renderer) {
             if (event.key.key == SDLK_3) input.dispatch_choice = 2;
         }
         if (event.type == SDL_EVENT_MOUSE_MOTION) {
-            input.pointer = logical_pointer(renderer, event.motion.x, event.motion.y);
+            const Vec2 pointer = logical_pointer(renderer, event.motion.x, event.motion.y);
+            if (input.camera_drag_down) {
+                input.camera_pan_delta.x += pointer.x - input.pointer.x;
+                input.camera_pan_delta.y += pointer.y - input.pointer.y;
+            }
+            input.pointer = pointer;
         }
         if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && !ImGui::GetIO().WantCaptureMouse) {
             input.pointer = logical_pointer(renderer, event.button.x, event.button.y);
-            if (event.button.button == SDL_BUTTON_LEFT) {
+            const bool space_drag = event.button.button == SDL_BUTTON_LEFT &&
+                                    keys[SDL_SCANCODE_SPACE];
+            if (event.button.button == SDL_BUTTON_MIDDLE || space_drag) {
+                input.camera_drag_down = true;
+                input.camera_drag_button = event.button.button;
+            } else if (event.button.button == SDL_BUTTON_LEFT) {
                 input.pointer_pressed = true;
                 input.pointer_down = true;
                 input.press_origin = input.pointer;
             }
         }
-        if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && !ImGui::GetIO().WantCaptureMouse) {
+        if (event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
             input.pointer = logical_pointer(renderer, event.button.x, event.button.y);
-            if (event.button.button == SDL_BUTTON_LEFT) {
-                input.pointer_released = true;
+            if (input.camera_drag_down && event.button.button == input.camera_drag_button) {
+                input.camera_drag_down = false;
+                input.camera_drag_button = 0;
+            } else if (event.button.button == SDL_BUTTON_LEFT) {
+                if (!ImGui::GetIO().WantCaptureMouse) input.pointer_released = true;
                 input.pointer_down = false;
             }
         }
@@ -71,7 +85,6 @@ void pump_input(InputState& input, SDL_Renderer* renderer) {
     }
     input.direct_down = (SDL_GetModState() & SDL_KMOD_CTRL) != 0;
     input.additive_down = (SDL_GetModState() & SDL_KMOD_SHIFT) != 0;
-    const bool* keys = SDL_GetKeyboardState(nullptr);
     input.pan_up = keys[SDL_SCANCODE_W] || keys[SDL_SCANCODE_UP];
     input.pan_down = keys[SDL_SCANCODE_S] || keys[SDL_SCANCODE_DOWN];
     input.pan_left = keys[SDL_SCANCODE_A] || keys[SDL_SCANCODE_LEFT];
@@ -94,4 +107,5 @@ void consume_input(InputState& input) {
     input.clear_orders_pressed = false;
     input.dispatch_choice = -1;
     input.zoom_delta = 0.0F;
+    input.camera_pan_delta = {};
 }
