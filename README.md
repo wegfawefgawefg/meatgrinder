@@ -28,10 +28,12 @@ can override only the external window; the internal framebuffer remains
 Controls:
 
 - Click a friendly stronghold to select it.
+- Clicking a different friendly stronghold immediately replaces the selection.
 - Drag a box around several friendly strongholds to select them.
 - Shift-drag adds boxed strongholds to the selection; Shift-click toggles one stronghold.
 - Click another node to assault along the route, capturing every hostile stop.
-- Control-click the target to rush directly past intermediate positions.
+- Control-click a target to rush directly past intermediate positions; this also
+  permits an immediate transfer into a friendly target instead of selecting it.
 - Select one or more owned bases, press R, then click a target to establish their rally.
 - Hold Control on the target click to make that rally direct instead of assault.
 - Pressing R immediately clears the selected sources' previous rallies; Escape leaves them cleared.
@@ -52,6 +54,10 @@ Rendering interpolates moving troops and the player-controlled camera without
 putting frame-rate-dependent behavior into the rules.
 
 ## Current first-pass rules
+
+Map letters preserve recovered location kinds: C castle, S stable, P port, A
+cannon, F fort, M mine, and + route. They currently share the same production
+and combat rules.
 
 Every owned base receives one soldier on the discrete GEN shown in the HUD. A
 rally order forwards its stored commitment from that base on every GEN toward

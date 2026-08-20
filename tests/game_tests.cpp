@@ -163,6 +163,28 @@ int main() {
     assert(match_node(state, group[0]).selected);
     assert(match_node(state, group[1]).selected);
 
+    // verify a friendly click replaces selection in one click
+    clear_selection(state);
+    select_node(state, group[0], false);
+    const Vec2 other_point = world_to_screen(node_world_position(state.levels.front(), group[1]),
+                                             state.camera.center, state.camera.zoom);
+    state.input.press_origin = other_point;
+    state.input.pointer = other_point;
+    state.input.direct_down = false;
+    handle_pointer_release(state);
+    assert(!match_node(state, group[0]).selected);
+    assert(match_node(state, group[1]).selected);
+    assert(state.match.armies.empty());
+
+    // verify Control-click retains deliberate one-shot friendly reinforcement
+    clear_selection(state);
+    select_node(state, group[0], false);
+    state.input.direct_down = true;
+    handle_pointer_release(state);
+    state.input.direct_down = false;
+    assert(!state.match.armies.empty());
+    assert(state.match.armies.back().path.back() == group[1]);
+
     // verify an assault captures an intermediate stop while a direct order bypasses it
     restart_level(state);
     int assault_source = -1;

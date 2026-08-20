@@ -477,7 +477,8 @@ void handle_pointer_release(State& state) {
         return;
     }
     const bool has_selection = std::ranges::any_of(state.match.nodes, &NodeState::selected);
-    if (target != nullptr && target->owner == player_owner && !has_selection) {
+    if (target != nullptr && target->owner == player_owner &&
+        (!has_selection || !state.input.direct_down)) {
         select_node(state, clicked, false);
         return;
     }
@@ -486,6 +487,7 @@ void handle_pointer_release(State& state) {
         for (const NodeState& node : state.match.nodes) {
             if (node.selected && node.id != clicked) sources.push_back(node.id);
         }
+        if (sources.empty()) return;
         for (int source : sources) {
             (void)send_army(state, source, clicked, state.dispatch_mode, !state.input.direct_down);
         }
