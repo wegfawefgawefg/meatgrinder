@@ -427,22 +427,14 @@ bool set_rally_order(State& state, int source_id, int target_id, bool assault, D
     return true;
 }
 
-bool begin_rally_orders(State& state, int source_id) {
-    NodeState* clicked = find_node(state.match, source_id);
-    if (clicked == nullptr || clicked->owner != player_owner) return false;
+bool begin_selected_rally_orders(State& state) {
     state.rally_sources.clear();
-    if (clicked->selected) {
-        for (NodeState& node : state.match.nodes) {
-            if (!node.selected || node.owner != player_owner) continue;
-            node.rally_target = -1;
-            state.rally_sources.push_back(node.id);
-        }
-    } else {
-        clear_selection(state);
-        clicked->selected = true;
-        clicked->rally_target = -1;
-        state.rally_sources.push_back(clicked->id);
+    for (NodeState& node : state.match.nodes) {
+        if (!node.selected || node.owner != player_owner) continue;
+        node.rally_target = -1;
+        state.rally_sources.push_back(node.id);
     }
+    if (state.rally_sources.empty()) return false;
     state.relocating_headquarters = false;
     state.clearing_orders = false;
     return true;
@@ -547,17 +539,6 @@ void handle_pointer_release(State& state) {
     select_node(state, clicked, false);
 }
 
-void handle_secondary_release(State& state) {
-    if (state.mode != Mode::playing) return;
-    const int source_id = node_at_pointer(state, state.input.pointer);
-    if (!begin_rally_orders(state, source_id)) {
-        state.relocating_headquarters = false;
-        state.clearing_orders = false;
-        state.rally_sources.clear();
-        clear_selection(state);
-    }
-}
-
 void step(State& state) {
     state.mode_seconds += step_seconds;
     if (state.mode == Mode::playing) step_camera(state);
@@ -572,13 +553,15 @@ void step(State& state) {
         state.rally_sources.clear();
         clear_selection(state);
     }
+    if (state.input.rally_orders_pressed && state.mode == Mode::playing) {
+        (void)begin_selected_rally_orders(state);
+    }
     if (state.input.clear_orders_pressed && state.mode == Mode::playing) {
         state.relocating_headquarters = false;
         state.rally_sources.clear();
         state.clearing_orders = !clear_selected_rallies(state) && !state.clearing_orders;
     }
     if (state.input.pointer_released) handle_pointer_release(state);
-    if (state.input.secondary_released) handle_secondary_release(state);
     if (state.mode != Mode::playing) {
         step_frontend(state);
         return;

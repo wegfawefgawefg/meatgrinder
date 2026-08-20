@@ -41,6 +41,7 @@ void pump_input(InputState& input, SDL_Renderer* renderer) {
             if (event.key.key == SDLK_LEFT || event.key.key == SDLK_A) input.left_pressed = true;
             if (event.key.key == SDLK_RIGHT || event.key.key == SDLK_D) input.right_pressed = true;
             if (event.key.key == SDLK_H) input.relocate_hq_pressed = true;
+            if (event.key.key == SDLK_R) input.rally_orders_pressed = true;
             if (event.key.key == SDLK_C) input.clear_orders_pressed = true;
             if (event.key.key == SDLK_1) input.dispatch_choice = 0;
             if (event.key.key == SDLK_2) input.dispatch_choice = 1;
@@ -62,8 +63,6 @@ void pump_input(InputState& input, SDL_Renderer* renderer) {
             if (event.button.button == SDL_BUTTON_LEFT) {
                 input.pointer_released = true;
                 input.pointer_down = false;
-            } else if (event.button.button == SDL_BUTTON_RIGHT) {
-                input.secondary_released = true;
             }
         }
         if (event.type == SDL_EVENT_MOUSE_WHEEL && !ImGui::GetIO().WantCaptureMouse) {
@@ -89,8 +88,8 @@ void consume_input(InputState& input) {
     input.right_pressed = false;
     input.pointer_pressed = false;
     input.pointer_released = false;
-    input.secondary_released = false;
     input.relocate_hq_pressed = false;
+    input.rally_orders_pressed = false;
     input.clear_orders_pressed = false;
     input.dispatch_choice = -1;
     input.zoom_delta = 0.0F;

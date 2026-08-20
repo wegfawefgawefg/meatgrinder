@@ -138,9 +138,9 @@ struct InputState {
     bool pointer_pressed{};
     bool pointer_released{};
     bool pointer_down{};
-    bool secondary_released{};
     bool direct_down{};
     bool relocate_hq_pressed{};
+    bool rally_orders_pressed{};
     bool clear_orders_pressed{};
     bool pan_up{};
     bool pan_down{};

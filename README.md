@@ -31,10 +31,9 @@ Controls:
 - Drag a box around several friendly strongholds to select them.
 - Click another node to assault along the route, capturing every hostile stop.
 - Control-click the target to rush directly past intermediate positions.
-- Right-click any owned base, then left-click a target, to establish a rally.
-- Box-select several bases and right-click one of them to assign the same rally to all of them.
+- Select one or more owned bases, press R, then click a target to establish their rally.
 - Hold Control on the target click to make that rally direct instead of assault.
-- Entering rally setup immediately clears the source's previous rally; Escape leaves it cleared.
+- Pressing R immediately clears the selected sources' previous rallies; Escape leaves them cleared.
 - Press C to clear all selected rallies, or press C with no selection and click one base to clear it.
 - Press H, then click an owned node, to relocate your headquarters.
 - Number keys select a commitment: 1 sends one, 2 sends half, and 3 sends all but one.

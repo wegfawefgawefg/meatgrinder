@@ -240,7 +240,7 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
                                  ? "RALLY SOURCES: CLICK TARGET  |  CTRL=DIRECT  |  ESC LEAVES CLEARED"
                            : state.clearing_orders
                                  ? "CLEAR RALLY: CLICK OWNED BASE  |  ESC CANCELS"
-                                 : "CLICK ASSAULT | CTRL DIRECT | RIGHT-CLICK RALLY | 1 ONE  2 HALF  3 ALL | C CLEAR | H HQ";
+                                 : "CLICK ASSAULT | CTRL DIRECT | R RALLY | 1 ONE  2 HALF  3 ALL | C CLEAR | H HQ";
     text(renderer, 24.0F, 690.0F, help, 1.0F);
     if (state.input.pointer_down) {
         color(renderer, 255, 228, 113);

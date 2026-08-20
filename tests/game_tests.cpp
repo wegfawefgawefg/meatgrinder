@@ -131,11 +131,13 @@ int main() {
         group.push_back(node.id);
     }
     assert(group.size() == 2);
-    assert(begin_rally_orders(state, group.front()));
+    state.mode = Mode::playing;
+    state.input.rally_orders_pressed = true;
+    step(state);
+    state.input.rally_orders_pressed = false;
     assert(state.rally_sources == group);
     assert(match_node(state, group[0]).rally_target == -1);
     assert(match_node(state, group[1]).rally_target == -1);
-    state.mode = Mode::playing;
     state.input.back_pressed = true;
     step(state);
     state.input.back_pressed = false;

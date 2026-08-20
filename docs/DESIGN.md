@@ -21,10 +21,11 @@ direct order which passes intermediate nodes and fights only at its final
 target. Packets do not collide on roads.
 
 Every occupied base generates one local soldier on a four-second GEN. The HUD
-shows the countdown. Right-clicking any owned base enters rally creation; the
-next left-click sets an assault rally, or a direct rally while Control is held.
-Entering rally creation clears the old order, so Escape intentionally leaves the
-base unordered. A box selection can assign the same rally to many sources. Each
+shows the countdown. Pressing R with one or more owned bases selected enters
+rally creation; the next left-click sets an assault rally, or a direct rally
+while Control is held. Entering rally creation clears the old orders, so Escape
+intentionally leaves those bases unordered. A box selection can assign the same
+rally to many sources. Each
 GEN forwards the rally's stored one, half, or all-but-one commitment along its
 persistent route. Source markers and colored paths remain visible until C clears
 selected orders, or C enters click-to-clear mode with no selection. Headquarters
