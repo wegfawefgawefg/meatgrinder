@@ -1,3 +1,4 @@
+#include "camera.hpp"
 #include "game.hpp"
 #include "level.hpp"
 
@@ -144,6 +145,22 @@ int main() {
     assert(state.rally_sources.empty());
     assert(state.mode == Mode::playing);
     assert(clear_selected_rallies(state));
+
+    // verify Shift-style selection adds and toggles without disturbing the group
+    clear_selection(state);
+    select_node(state, group[0], true);
+    select_node(state, group[1], true);
+    assert(match_node(state, group[0]).selected);
+    assert(match_node(state, group[1]).selected);
+    select_node(state, group[0], true);
+    assert(!match_node(state, group[0]).selected);
+    assert(match_node(state, group[1]).selected);
+    const Vec2 group_point = world_to_screen(node_world_position(state.levels.front(), group[0]),
+                                             state.camera.center, state.camera.zoom);
+    select_box(state, {group_point.x - 2.0F, group_point.y - 2.0F},
+               {group_point.x + 2.0F, group_point.y + 2.0F}, true);
+    assert(match_node(state, group[0]).selected);
+    assert(match_node(state, group[1]).selected);
 
     // verify an assault captures an intermediate stop while a direct order bypasses it
     restart_level(state);

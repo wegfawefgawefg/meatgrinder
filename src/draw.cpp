@@ -155,6 +155,31 @@ void draw_rallies(SDL_Renderer* renderer, const Level& level, const Match& match
     }
 }
 
+void draw_pending_rallies(SDL_Renderer* renderer, const State& state, const Level& level,
+                          Vec2 center, float zoom) {
+    if (state.rally_sources.empty()) return;
+    const int target = node_at_pointer(state, state.input.pointer);
+    if (state.input.direct_down) color(renderer, 239, 157, 77);
+    else color(renderer, 255, 228, 113);
+    for (int source_id : state.rally_sources) {
+        const Vec2 source = world_to_screen(node_world_position(level, source_id), center, zoom);
+        const std::vector<int> path = target >= 0 ? find_path(level, source_id, target)
+                                                  : std::vector<int>{};
+        if (path.size() >= 2) {
+            for (std::size_t index = 1; index < path.size(); ++index) {
+                const Vec2 a = world_to_screen(node_world_position(level, path[index - 1]), center,
+                                               zoom);
+                const Vec2 b = world_to_screen(node_world_position(level, path[index]), center,
+                                               zoom);
+                thick_line(renderer, a, b, 4.0F);
+            }
+        } else if (target < 0) {
+            thick_line(renderer, source, state.input.pointer, 2.0F);
+        }
+        text(renderer, source.x - 4.0F, source.y - 43.0F, "R", 1.0F);
+    }
+}
+
 void draw_nodes(SDL_Renderer* renderer, const Level& level, const Match& match, Vec2 center,
                 float zoom) {
     char count[32];
@@ -207,6 +232,7 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
     draw_tiles(renderer, level, center, zoom);
     draw_routes(renderer, level, center, zoom);
     draw_rallies(renderer, level, state.match, center, zoom);
+    draw_pending_rallies(renderer, state, level, center, zoom);
     draw_armies(renderer, level, state.match, center, zoom, alpha);
     draw_nodes(renderer, level, state.match, center, zoom);
     color(renderer, 25, 27, 25, 235);
@@ -237,12 +263,13 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
     const char* help = state.relocating_headquarters
                            ? "RELOCATE HQ: CLICK OWNED BASE  |  ESC CANCELS"
                            : !state.rally_sources.empty()
-                                 ? "RALLY SOURCES: CLICK TARGET  |  CTRL=DIRECT  |  ESC LEAVES CLEARED"
+                                 ? "RALLY TARGET: LEFT-CLICK NODE  |  CTRL=DIRECT  |  ESC LEAVES CLEARED"
                            : state.clearing_orders
                                  ? "CLEAR RALLY: CLICK OWNED BASE  |  ESC CANCELS"
-                                 : "CLICK ASSAULT | CTRL DIRECT | R RALLY | 1 ONE  2 HALF  3 ALL | C CLEAR | H HQ";
+                                 : "CLICK ASSAULT | SHIFT ADD/TOGGLE | CTRL DIRECT | R RALLY | 1 ONE 2 HALF 3 ALL | C CLEAR | H HQ";
     text(renderer, 24.0F, 690.0F, help, 1.0F);
-    if (state.input.pointer_down) {
+    if (state.input.pointer_down && state.rally_sources.empty() && !state.clearing_orders &&
+        !state.relocating_headquarters) {
         color(renderer, 255, 228, 113);
         const Vec2 a = state.input.press_origin;
         const Vec2 b = state.input.pointer;

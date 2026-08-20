@@ -14,7 +14,8 @@ front, eases into place at setup, emphasizes victory, and otherwise moves only
 under player pan and zoom. Captures never steal camera control. Castles, roads,
 troops, and background tiles all share the same coordinate system.
 
-The player can select one node, box-select several, and issue a destination
+The player can select one node, box-select several, Shift-box to add more, or
+Shift-click to toggle one member of the selection, then issue a destination
 order. A normal order is an assault: the packet stops, fights, and captures at
 every hostile node on its route before continuing. Control-click issues a
 direct order which passes intermediate nodes and fights only at its final

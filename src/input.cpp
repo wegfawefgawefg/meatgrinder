@@ -70,6 +70,7 @@ void pump_input(InputState& input, SDL_Renderer* renderer) {
         }
     }
     input.direct_down = (SDL_GetModState() & SDL_KMOD_CTRL) != 0;
+    input.additive_down = (SDL_GetModState() & SDL_KMOD_SHIFT) != 0;
     const bool* keys = SDL_GetKeyboardState(nullptr);
     input.pan_up = keys[SDL_SCANCODE_W] || keys[SDL_SCANCODE_UP];
     input.pan_down = keys[SDL_SCANCODE_S] || keys[SDL_SCANCODE_DOWN];

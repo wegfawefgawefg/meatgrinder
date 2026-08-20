@@ -29,6 +29,7 @@ Controls:
 
 - Click a friendly stronghold to select it.
 - Drag a box around several friendly strongholds to select them.
+- Shift-drag adds boxed strongholds to the selection; Shift-click toggles one stronghold.
 - Click another node to assault along the route, capturing every hostile stop.
 - Control-click the target to rush directly past intermediate positions.
 - Select one or more owned bases, press R, then click a target to establish their rally.

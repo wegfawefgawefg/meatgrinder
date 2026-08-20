@@ -16,6 +16,7 @@ bool begin_selected_rally_orders(State& state);
 bool clear_selected_rallies(State& state);
 void clear_selection(State& state);
 void select_node(State& state, int node_id, bool add);
-void select_box(State& state, Vec2 a, Vec2 b);
+void select_box(State& state, Vec2 a, Vec2 b, bool add = false);
+int node_at_pointer(const State& state, Vec2 pointer);
 void handle_pointer_release(State& state);
 void step(State& state);

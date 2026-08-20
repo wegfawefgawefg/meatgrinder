@@ -457,11 +457,12 @@ void clear_selection(State& state) {
 void select_node(State& state, int node_id, bool add) {
     if (!add) clear_selection(state);
     NodeState* node = find_node(state.match, node_id);
-    if (node != nullptr && node->owner == player_owner) node->selected = true;
+    if (node == nullptr || node->owner != player_owner) return;
+    node->selected = add ? !node->selected : true;
 }
 
-void select_box(State& state, Vec2 a, Vec2 b) {
-    clear_selection(state);
+void select_box(State& state, Vec2 a, Vec2 b, bool add) {
+    if (!add) clear_selection(state);
     const Level& level = state.levels[static_cast<std::size_t>(state.campaign_level)];
     a = screen_to_world(a, state.camera);
     b = screen_to_world(b, state.camera);
@@ -471,8 +472,10 @@ void select_box(State& state, Vec2 a, Vec2 b) {
     const float bottom = std::max(a.y, b.y);
     for (NodeState& node : state.match.nodes) {
         const Vec2 point = node_world_position(level, node.id);
-        node.selected = node.owner == player_owner && point.x >= left && point.x <= right &&
-                        point.y >= top && point.y <= bottom;
+        if (node.owner == player_owner && point.x >= left && point.x <= right &&
+            point.y >= top && point.y <= bottom) {
+            node.selected = true;
+        }
     }
 }
 
@@ -490,21 +493,16 @@ void handle_pointer_release(State& state) {
     if (state.mode != Mode::playing) return;
     const float drag = std::hypot(state.input.pointer.x - state.input.press_origin.x,
                                   state.input.pointer.y - state.input.press_origin.y);
-    if (drag > 10.0F) {
-        select_box(state, state.input.press_origin, state.input.pointer);
-        return;
-    }
     const int clicked = node_at_pointer(state, state.input.pointer);
-    if (clicked < 0) {
-        clear_selection(state);
-        return;
-    }
     NodeState* target = find_node(state.match, clicked);
     if (state.relocating_headquarters) {
-        if (relocate_headquarters(state, clicked)) state.relocating_headquarters = false;
+        if (clicked >= 0 && relocate_headquarters(state, clicked)) {
+            state.relocating_headquarters = false;
+        }
         return;
     }
     if (!state.rally_sources.empty()) {
+        if (clicked < 0) return;
         for (int source_id : state.rally_sources) {
             if (clicked == source_id) continue;
             (void)set_rally_order(state, source_id, clicked, !state.input.direct_down,
@@ -518,6 +516,19 @@ void handle_pointer_release(State& state) {
             target->rally_target = -1;
             state.clearing_orders = false;
         }
+        return;
+    }
+    if (drag > 10.0F) {
+        select_box(state, state.input.press_origin, state.input.pointer,
+                   state.input.additive_down);
+        return;
+    }
+    if (clicked < 0) {
+        if (!state.input.additive_down) clear_selection(state);
+        return;
+    }
+    if (state.input.additive_down) {
+        select_node(state, clicked, true);
         return;
     }
     const bool has_selection = std::ranges::any_of(state.match.nodes, &NodeState::selected);
