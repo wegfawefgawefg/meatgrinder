@@ -3,7 +3,7 @@
 The campaign is organized as six mechanic-led worlds with five battles each:
 
 ```text
-main menu -> world map -> level map -> level card -> battle -> defeat/retry
+main menu -> world map -> level map -> battle -> defeat/retry
                   ^             ^                         |
                   |             +---------- score <-------+
                   +------- world unlock transition

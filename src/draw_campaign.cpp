@@ -147,10 +147,24 @@ void level_select(SDL_Renderer* renderer, const State& state) {
     text(renderer, 24.0F, 690.0F, "ESC WORLDS", 1.0F);
 }
 
-void draw_swipe(SDL_Renderer* renderer, const State& state, float alpha) {
+float transition_progress(const State& state, float alpha) {
     const float render_seconds = state.mode_seconds + alpha * step_seconds;
-    const float progress = smooth(render_seconds / 0.58F);
-    const float left = std::lerp(static_cast<float>(layout_width), 0.0F, progress);
+    return std::clamp(render_seconds / 0.7F, 0.0F, 1.0F);
+}
+
+} // namespace
+
+bool campaign_transition_revealing(const State& state, float alpha) {
+    return transition_progress(state, alpha) >= 0.5F;
+}
+
+void draw_campaign_transition(SDL_Renderer* renderer, const State& state, float alpha) {
+    const float progress = transition_progress(state, alpha);
+    const float phase = progress < 0.5F ? smooth(progress * 2.0F)
+                                        : smooth((progress - 0.5F) * 2.0F);
+    const float left = progress < 0.5F
+        ? std::lerp(static_cast<float>(layout_width), 0.0F, phase)
+        : std::lerp(0.0F, -static_cast<float>(layout_width), phase);
     color(renderer, 174, 53, 47);
     fill(renderer, left, 0.0F, static_cast<float>(layout_width),
          static_cast<float>(layout_height));
@@ -174,11 +188,10 @@ void draw_swipe(SDL_Renderer* renderer, const State& state, float alpha) {
          subtitle, 1.0F);
 }
 
-} // namespace
-
 void draw_campaign_screen(SDL_Renderer* renderer, const State& state, float alpha) {
-    if (state.mode == Mode::world_select || state.mode == Mode::world_transition ||
-        state.mode == Mode::world_unlock) {
+    const bool show_levels = state.mode == Mode::level_select ||
+        (state.mode == Mode::world_transition && campaign_transition_revealing(state, alpha));
+    if (!show_levels) {
         world_select(renderer, state);
         if (state.mode == Mode::world_unlock) {
             color(renderer, 20, 22, 21, 245);
@@ -191,8 +204,5 @@ void draw_campaign_screen(SDL_Renderer* renderer, const State& state, float alph
         }
     } else {
         level_select(renderer, state);
-    }
-    if (state.mode == Mode::world_transition || state.mode == Mode::level_transition) {
-        draw_swipe(renderer, state, alpha);
     }
 }

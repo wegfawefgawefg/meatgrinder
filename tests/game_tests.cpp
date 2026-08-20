@@ -77,9 +77,11 @@ int main() {
     for (int frame = 0; frame < 43; ++frame) step(state);
     assert(state.mode == Mode::level_select);
     state.selected_level = 0;
+    start_level(state, state.selected_level);
     change_mode(state, Mode::level_transition);
+    assert(!state.match.nodes.empty());
     for (int frame = 0; frame < 43; ++frame) step(state);
-    assert(state.mode == Mode::level_card);
+    assert(state.mode == Mode::playing);
 
     start_level(state, 0);
     assert(state.mode == Mode::level_card);

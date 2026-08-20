@@ -470,9 +470,17 @@ void draw(SDL_Renderer* renderer, const State& state, float alpha) {
     if (state.mode == Mode::main_menu) draw_main_menu(renderer, state);
     else if (state.mode == Mode::options) draw_options(renderer, state);
     else if (state.mode == Mode::world_select || state.mode == Mode::world_unlock ||
-             state.mode == Mode::world_transition ||
-             state.mode == Mode::level_select || state.mode == Mode::level_transition) {
+             state.mode == Mode::level_select) {
         draw_campaign_screen(renderer, state, alpha);
+    }
+    else if (state.mode == Mode::world_transition) {
+        draw_campaign_screen(renderer, state, alpha);
+        draw_campaign_transition(renderer, state, alpha);
+    }
+    else if (state.mode == Mode::level_transition) {
+        if (campaign_transition_revealing(state, alpha)) draw_playing(renderer, state, alpha);
+        else draw_campaign_screen(renderer, state, alpha);
+        draw_campaign_transition(renderer, state, alpha);
     }
     else if (state.mode == Mode::level_card) draw_level_card(renderer, state, alpha);
     else if (state.mode == Mode::playing) draw_playing(renderer, state, alpha);
