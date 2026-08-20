@@ -36,6 +36,7 @@ enum class Mode {
     level_select,
     level_card,
     playing,
+    victory,
     paused,
     defeat,
     score,
@@ -186,6 +187,7 @@ struct Match {
     float mine_clock{};
     float outcome_clock{};
     int defeated_owner{neutral_owner};
+    int defeated_headquarters{-1};
     AiStyle ai_style{AiStyle::balanced};
     AiMind ai;
 };

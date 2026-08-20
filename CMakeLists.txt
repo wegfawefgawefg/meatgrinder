@@ -80,6 +80,7 @@ add_executable(meatgrinder
     src/debug.cpp
     src/draw.cpp
     src/draw_campaign.cpp
+    src/draw_outcome.cpp
     src/input.cpp
     src/main.cpp)
 target_include_directories(meatgrinder PRIVATE src)

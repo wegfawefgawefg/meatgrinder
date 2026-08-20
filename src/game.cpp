@@ -112,7 +112,13 @@ void resolve_arrival(State& state, Army& army, int target_id, bool final) {
         if (army.owner == player_owner) ++state.match.stats.nodes_captured;
         if (old_owner == player_owner) state.match.stats.soldiers_lost += static_cast<int>(target->soldiers);
         const float survivors = army.soldiers - defense;
-        if (target->headquarters && old_owner >= 0) state.match.defeated_owner = old_owner;
+        if (target->headquarters && old_owner >= 0) {
+            state.match.defeated_owner = old_owner;
+            state.match.defeated_headquarters = target->id;
+            const Level& level = state.levels[static_cast<std::size_t>(state.campaign_level)];
+            state.camera.target_center = node_world_position(level, target->id);
+            state.camera.target_zoom = std::clamp(state.camera.target_zoom * 1.18F, 0.45F, 2.5F);
+        }
         target->headquarters = false;
         target->rally_target = -1;
         target->owner = army.owner;
@@ -182,19 +188,23 @@ bool side_alive(const Match& match, int owner) {
            std::ranges::any_of(match.armies, [owner](const Army& army) { return army.owner == owner; });
 }
 
+void begin_victory(State& state) {
+    const int time_bonus =
+        std::max(0, 3000 - static_cast<int>(state.match.stats.elapsed_seconds * 10.0F));
+    state.last_level_score = 1000 + time_bonus + state.match.stats.nodes_captured * 100;
+    state.campaign_score += state.last_level_score;
+    ++state.completed_levels;
+    record_level_result(state);
+    change_mode(state, Mode::victory);
+}
+
 void step_outcome(State& state) {
     if (state.match.defeated_owner == player_owner) {
         change_mode(state, Mode::defeat);
         return;
     }
     if (state.match.defeated_owner == enemy_owner) {
-        const int time_bonus =
-            std::max(0, 3000 - static_cast<int>(state.match.stats.elapsed_seconds * 10.0F));
-        state.last_level_score = 1000 + time_bonus + state.match.stats.nodes_captured * 100;
-        state.campaign_score += state.last_level_score;
-        ++state.completed_levels;
-        record_level_result(state);
-        change_mode(state, Mode::score);
+        begin_victory(state);
         return;
     }
     const bool player_alive = side_alive(state.match, player_owner);
@@ -212,12 +222,7 @@ void step_outcome(State& state) {
         change_mode(state, Mode::defeat);
         return;
     }
-    const int time_bonus = std::max(0, 3000 - static_cast<int>(state.match.stats.elapsed_seconds * 10.0F));
-    state.last_level_score = 1000 + time_bonus + state.match.stats.nodes_captured * 100;
-    state.campaign_score += state.last_level_score;
-    ++state.completed_levels;
-    record_level_result(state);
-    change_mode(state, Mode::score);
+    begin_victory(state);
 }
 
 void step_frontend(State& state) {
@@ -279,6 +284,10 @@ void step_frontend(State& state) {
         }
         return;
     }
+    if (state.mode == Mode::victory) {
+        if (state.mode_seconds >= victory_animation_seconds) change_mode(state, Mode::score);
+        return;
+    }
     if (state.mode == Mode::paused) {
         if (state.input.confirm_pressed || state.input.back_pressed) change_mode(state, Mode::playing);
         return;
@@ -298,7 +307,8 @@ void step_frontend(State& state) {
         else change_mode(state, Mode::level_select);
         return;
     }
-    if (state.mode == Mode::score && (state.input.confirm_pressed || state.input.pointer_released)) {
+    if (state.mode == Mode::score && state.mode_seconds >= score_input_seconds &&
+        (state.input.confirm_pressed || state.input.pointer_released)) {
         const Level& level = state.levels[static_cast<std::size_t>(state.campaign_level)];
         const World& world = state.worlds[static_cast<std::size_t>(level.world)];
         if (state.campaign_level == static_cast<int>(state.levels.size()) - 1) {
@@ -522,6 +532,7 @@ void handle_pointer_release(State& state) {
 void step(State& state) {
     state.mode_seconds += step_seconds;
     if (state.mode == Mode::playing) step_camera(state);
+    else if (state.mode == Mode::victory) step_camera_focus(state);
     if (state.input.dispatch_choice >= 0) {
         constexpr DispatchMode modes[]{DispatchMode::one, DispatchMode::half,
                                        DispatchMode::all_but_one};

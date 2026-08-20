@@ -2,6 +2,7 @@
 
 #include "camera.hpp"
 #include "draw_campaign.hpp"
+#include "draw_outcome.hpp"
 #include "game.hpp"
 #include "level.hpp"
 
@@ -291,6 +292,7 @@ void draw_nodes(SDL_Renderer* renderer, const Level& level, const Match& match, 
     const float size = std::clamp(38.0F * zoom, 24.0F, 52.0F);
     const float font_scale = std::clamp(zoom, 0.8F, 1.35F);
     for (const NodeState& node : match.nodes) {
+        if (node.id == match.defeated_headquarters) continue;
         const Vec2 point = world_to_screen(node_world_position(level, node.id), center, zoom);
         draw_node_shape(renderer, node, point, size);
         if (node.selected) {
@@ -404,13 +406,16 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
     std::snprintf(generation, sizeof(generation), "NEXT GEN %.1fs", generation_left);
     text(renderer, 1055.0F, 22.0F, generation, 1.0F);
     draw_population_bar(renderer, state.match);
-    const char* help = !state.rally_sources.empty()
-                                 ? "RALLY TARGET: LEFT-CLICK NODE  |  CTRL=DIRECT  |  ESC LEAVES CLEARED"
-                           : state.clearing_orders
-                                 ? "CLEAR RALLY: CLICK OWNED BASE  |  ESC CANCELS"
-                                 : "CLICK ASSAULT | SHIFT ADD/TOGGLE | CTRL DIRECT | R RALLY | 1 ONE 2 HALF 3 ALL | C CLEAR";
-    text(renderer, 24.0F, 690.0F, help, 1.0F);
-    if (state.input.pointer_down && state.rally_sources.empty() && !state.clearing_orders) {
+    if (state.mode == Mode::playing) {
+        const char* help = !state.rally_sources.empty()
+                                     ? "RALLY TARGET: LEFT-CLICK NODE  |  CTRL=DIRECT  |  ESC LEAVES CLEARED"
+                               : state.clearing_orders
+                                     ? "CLEAR RALLY: CLICK OWNED BASE  |  ESC CANCELS"
+                                     : "CLICK ASSAULT | SHIFT ADD/TOGGLE | CTRL DIRECT | R RALLY | 1 ONE 2 HALF 3 ALL | C CLEAR";
+        text(renderer, 24.0F, 690.0F, help, 1.0F);
+    }
+    if (state.mode == Mode::playing && state.input.pointer_down && state.rally_sources.empty() &&
+        !state.clearing_orders) {
         color(renderer, 255, 228, 113);
         const Vec2 a = state.input.press_origin;
         const Vec2 b = state.input.pointer;
@@ -476,24 +481,6 @@ void draw_overlay_screen(SDL_Renderer* renderer, const State& state) {
         centered_text(renderer, 180.0F, "THE LINE BROKE", 3.0F);
         draw_button(renderer, 340.0F, "RETRY", state.menu_choice == 0);
         draw_button(renderer, 405.0F, "QUIT TO MAP", state.menu_choice == 1);
-    } else if (state.mode == Mode::score) {
-        centered_text(renderer, 105.0F, "FRONT SECURED", 3.0F);
-        char line[128];
-        std::snprintf(line, sizeof(line), "TIME                 %02d:%02d",
-                      static_cast<int>(state.match.stats.elapsed_seconds) / 60,
-                      static_cast<int>(state.match.stats.elapsed_seconds) % 60);
-        text(renderer, 430.0F, 250.0F, line, 2.0F);
-        std::snprintf(line, sizeof(line), "ORDERS               %d", state.match.stats.orders);
-        text(renderer, 430.0F, 295.0F, line, 2.0F);
-        std::snprintf(line, sizeof(line), "SOLDIERS SENT        %d", state.match.stats.soldiers_sent);
-        text(renderer, 430.0F, 340.0F, line, 2.0F);
-        std::snprintf(line, sizeof(line), "GROUND TAKEN         %d", state.match.stats.nodes_captured);
-        text(renderer, 430.0F, 385.0F, line, 2.0F);
-        std::snprintf(line, sizeof(line), "GEN CYCLES           %d", state.match.stats.generations);
-        text(renderer, 430.0F, 430.0F, line, 2.0F);
-        std::snprintf(line, sizeof(line), "LEVEL SCORE          %d", state.last_level_score);
-        text(renderer, 430.0F, 485.0F, line, 2.0F);
-        centered_text(renderer, 585.0F, "PRESS TO CONTINUE", 1.5F);
     } else {
         centered_text(renderer, 170.0F, "THE WAR IS OVER", 3.0F);
         centered_text(renderer, 300.0F, "EVERY FRONT SECURED", 2.0F);
@@ -519,5 +506,13 @@ void draw(SDL_Renderer* renderer, const State& state, float alpha) {
     }
     else if (state.mode == Mode::level_card) draw_level_card(renderer, state, alpha);
     else if (state.mode == Mode::playing) draw_playing(renderer, state, alpha);
+    else if (state.mode == Mode::victory) {
+        draw_playing(renderer, state, alpha);
+        draw_victory_effect(renderer, state, alpha);
+    }
+    else if (state.mode == Mode::score) {
+        draw_playing(renderer, state, alpha);
+        draw_score_screen(renderer, state, alpha);
+    }
     else draw_overlay_screen(renderer, state);
 }

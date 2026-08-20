@@ -2,6 +2,9 @@
 
 #include "state.hpp"
 
+inline constexpr float victory_animation_seconds = 1.45F;
+inline constexpr float score_input_seconds = 2.45F;
+
 void change_mode(State& state, Mode mode);
 void start_level(State& state, int level_index);
 void restart_level(State& state);

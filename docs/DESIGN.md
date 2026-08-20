@@ -36,7 +36,9 @@ rally to many sources. Each GEN forwards the rally's stored one, half, or
 all-but-one commitment along its
 persistent route. Source markers and colored paths remain visible until C clears
 selected orders, or C enters click-to-clear mode with no selection. Headquarters
-is fixed at match start, and its capture immediately defeats its owner.
+is fixed at match start. Its capture immediately defeats its owner, destroys the
+HQ on the battlefield, then opens the score screen with a top-down impact wipe
+and staggered counting rows.
 
 Specialized nodes exchange production for positional power. A cannon fires at
 one authored hostile target every two seconds; its projectile takes 1.1 seconds

@@ -5,6 +5,17 @@
 #include <algorithm>
 #include <cmath>
 
+namespace {
+
+void settle_camera(Camera& camera) {
+    constexpr float response = 0.13F;
+    camera.center.x += (camera.target_center.x - camera.center.x) * response;
+    camera.center.y += (camera.target_center.y - camera.center.y) * response;
+    camera.zoom += (camera.target_zoom - camera.zoom) * response;
+}
+
+} // namespace
+
 void setup_camera(State& state, const Level& level) {
     float left = 100000.0F;
     float right = -100000.0F;
@@ -53,10 +64,14 @@ void step_camera(State& state) {
         camera.target_zoom *= std::pow(1.12F, state.input.zoom_delta);
         camera.target_zoom = std::clamp(camera.target_zoom, 0.45F, 2.5F);
     }
-    constexpr float response = 0.13F;
-    camera.center.x += (camera.target_center.x - camera.center.x) * response;
-    camera.center.y += (camera.target_center.y - camera.center.y) * response;
-    camera.zoom += (camera.target_zoom - camera.zoom) * response;
+    settle_camera(camera);
+}
+
+void step_camera_focus(State& state) {
+    Camera& camera = state.camera;
+    camera.previous_center = camera.center;
+    camera.previous_zoom = camera.zoom;
+    settle_camera(camera);
 }
 
 Vec2 interpolated_camera_center(const Camera& camera, float alpha) {

@@ -342,12 +342,19 @@ int main() {
     assert(send_army_path(state, player_attack_source, {player_attack_source, enemy_hq}, 9.0F));
     step(state);
     assert(state.match.defeated_owner == enemy_owner);
-    assert(state.mode == Mode::score);
+    assert(state.match.defeated_headquarters == enemy_hq);
+    assert(state.mode == Mode::victory);
     assert(state.results[0].completed);
     assert(state.results[0].best_score == state.last_level_score);
     assert(state.progress_dirty);
     assert(headquarters_count(state, player_owner) == 1);
     assert(headquarters_count(state, enemy_owner) == 0);
+    for (int frame = 0; frame < 100 && state.mode == Mode::victory; ++frame) step(state);
+    assert(state.mode == Mode::score);
+    state.input.confirm_pressed = true;
+    step(state);
+    assert(state.mode == Mode::score);
+    state.input.confirm_pressed = false;
 
     restart_level(state);
     match_node(state, enemy_attack_source).soldiers = 10.0F;
@@ -356,6 +363,7 @@ int main() {
     assert(send_army_path(state, enemy_attack_source, {enemy_attack_source, player_hq}, 9.0F));
     step(state);
     assert(state.match.defeated_owner == player_owner);
+    assert(state.match.defeated_headquarters == player_hq);
     assert(state.mode == Mode::defeat);
     assert(headquarters_count(state, player_owner) == 0);
     assert(headquarters_count(state, enemy_owner) == 1);
