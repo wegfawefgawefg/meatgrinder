@@ -30,6 +30,11 @@ struct Camera {
 enum class Mode {
     main_menu,
     options,
+    world_select,
+    world_unlock,
+    world_zoom,
+    level_select,
+    level_zoom,
     level_card,
     playing,
     paused,
@@ -39,8 +44,8 @@ enum class Mode {
 };
 
 enum class NodeKind {
-    route,
-    castle,
+    node,
+    producer,
     stable,
     port,
     cannon,
@@ -78,9 +83,11 @@ struct LevelNode {
     int id{};
     int x{};
     int y{};
-    NodeKind kind{};
+    NodeKind kind{NodeKind::node};
     int owner{neutral_owner};
     float soldiers{};
+    bool headquarters{};
+    int cannon_target{-1};
 };
 
 struct Link {
@@ -89,20 +96,36 @@ struct Link {
 };
 
 struct Level {
+    std::string id;
     std::string name;
-    std::string source_hash;
+    std::string briefing;
+    int world{};
+    int map_x{};
+    int map_y{};
+    std::vector<std::string> prerequisites;
     std::vector<std::string> tiles;
     std::vector<LevelNode> nodes;
     std::vector<Link> links;
+    std::vector<Link> sea_links;
+};
+
+struct World {
+    std::string id;
+    std::string name;
+    std::string theme;
+    int map_x{};
+    int map_y{};
+    std::vector<int> levels;
 };
 
 struct NodeState {
     int id{};
-    NodeKind kind{};
+    NodeKind kind{NodeKind::node};
     int owner{neutral_owner};
     float soldiers{};
     bool selected{};
     bool headquarters{};
+    int cannon_target{-1};
     int rally_target{-1};
     bool rally_assault{true};
     DispatchMode rally_dispatch{DispatchMode::half};
@@ -116,6 +139,23 @@ struct Army {
     float previous_progress{};
     float progress{};
     bool assault{true};
+    float speed_scale{1.0F};
+};
+
+struct CannonShot {
+    int owner{};
+    int source{};
+    int target{};
+    float previous_progress{};
+    float progress{};
+};
+
+struct GoldShipment {
+    int owner{};
+    std::vector<int> path;
+    int leg{};
+    float previous_progress{};
+    float progress{};
 };
 
 struct MatchStats {
@@ -138,13 +178,23 @@ struct AiMind {
 struct Match {
     std::vector<NodeState> nodes;
     std::vector<Army> armies;
+    std::vector<CannonShot> cannon_shots;
+    std::vector<GoldShipment> gold_shipments;
     MatchStats stats;
     float ai_clock{};
     float generation_clock{};
+    float cannon_clock{};
+    float mine_clock{};
     float outcome_clock{};
     int defeated_owner{neutral_owner};
     AiStyle ai_style{AiStyle::balanced};
     AiMind ai;
+};
+
+struct LevelResult {
+    bool completed{};
+    int best_score{};
+    float best_seconds{};
 };
 
 struct InputState {
@@ -180,6 +230,12 @@ struct InputState {
 struct Rules {
     float army_speed{20.0F};
     float generation_seconds{4.0F};
+    float cannon_seconds{2.0F};
+    float cannon_shot_seconds{1.1F};
+    float mine_seconds{6.0F};
+    float gold_speed{10.0F};
+    float stable_speed_scale{1.5F};
+    float fort_defense_scale{2.0F};
     float enemy_think_seconds{0.85F};
     float enemy_aggression{0.48F};
 };
@@ -187,18 +243,24 @@ struct Rules {
 struct State {
     Mode mode{Mode::main_menu};
     std::vector<Level> levels;
+    std::vector<World> worlds;
+    std::vector<LevelResult> results;
     Match match;
     InputState input;
     Rules rules;
     Camera camera;
     std::mt19937 random{0x4d454154U};
     int campaign_level{};
+    int selected_world{};
+    int selected_level{};
     int menu_choice{};
     int options_choice{};
     int campaign_score{};
+    int last_level_score{};
     int completed_levels{};
     AiDifficulty ai_difficulty{AiDifficulty::normal};
     float mode_seconds{};
+    bool progress_dirty{};
     bool fullscreen{};
     bool debug_open{};
     bool clearing_orders{};

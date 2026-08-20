@@ -1,7 +1,9 @@
 #include "camera.hpp"
 #include "ai.hpp"
+#include "campaign.hpp"
 #include "game.hpp"
 #include "level.hpp"
+#include "progress.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -43,10 +45,41 @@ int main() {
     State state;
     assert(state.rules.army_speed == 20.0F);
     std::string error;
-    assert(load_campaign(std::string(MG_ASSET_ROOT) + "/levels/campaign.json", state.levels, error));
-    assert(state.levels.size() == 10);
-    assert(state.levels.front().nodes.size() == 20);
-    assert(state.levels.back().nodes.size() == 52);
+    assert(load_campaign(std::string(MG_ASSET_ROOT) + "/levels/campaign.json", state.levels,
+                         state.worlds, error));
+    state.results.assign(state.levels.size(), {});
+    assert(state.worlds.size() == 6);
+    assert(state.levels.size() == 30);
+    assert(state.levels.front().nodes.size() == 5);
+    assert(level_available(state, 0));
+    assert(!level_available(state, 1));
+    assert(world_available(state, 0));
+    assert(!world_available(state, 1));
+    state.results[0].completed = true;
+    assert(level_available(state, 1));
+    assert(level_available(state, 2));
+    state.results[0].completed = false;
+
+    const std::filesystem::path progress_path =
+        std::filesystem::temp_directory_path() / "meatgrinder-progress-test.json";
+    state.results[0] = {.completed = true, .best_score = 1234, .best_seconds = 45.0F};
+    assert(save_progress(progress_path, state, error));
+    State loaded_progress;
+    loaded_progress.levels = state.levels;
+    assert(load_progress(progress_path, loaded_progress, error));
+    assert(loaded_progress.results[0].completed);
+    assert(loaded_progress.results[0].best_score == 1234);
+    assert(loaded_progress.results[0].best_seconds == 45.0F);
+    assert(std::filesystem::remove(progress_path));
+    state.results.assign(state.levels.size(), {});
+    state.selected_world = 0;
+    change_mode(state, Mode::world_zoom);
+    for (int frame = 0; frame < 43; ++frame) step(state);
+    assert(state.mode == Mode::level_select);
+    state.selected_level = 0;
+    change_mode(state, Mode::level_zoom);
+    for (int frame = 0; frame < 43; ++frame) step(state);
+    assert(state.mode == Mode::level_card);
 
     start_level(state, 0);
     assert(state.mode == Mode::level_card);
@@ -77,7 +110,7 @@ int main() {
 
     step_until_armies_stop(state);
 
-    // verify every owned base receives the same fixed GEN recruit
+    // verify only producers and headquarters receive the fixed GEN recruit
     restart_level(state);
     state.mode = Mode::playing;
     state.rules.enemy_think_seconds = 10000.0F;
@@ -87,13 +120,66 @@ int main() {
     for (int frame = 0; frame < 7; ++frame) step(state);
     for (std::size_t index = 0; index < state.match.nodes.size(); ++index) {
         const NodeState& node = state.match.nodes[index];
-        if (node.owner >= 0) assert(node.soldiers == before[index] + 1.0F);
-        else assert(node.soldiers == before[index]);
+        if (node.owner >= 0 && (node.kind == NodeKind::producer || node.headquarters)) {
+            assert(node.soldiers == before[index] + 1.0F);
+        } else {
+            assert(node.soldiers == before[index]);
+        }
     }
     assert(state.match.stats.generations == 1);
 
+    // verify cannon shots travel before removing one hostile defender
+    start_level(state, 5);
+    state.mode = Mode::playing;
+    state.rules.generation_seconds = 10000.0F;
+    state.rules.enemy_think_seconds = 10000.0F;
+    state.rules.cannon_seconds = 0.1F;
+    state.rules.cannon_shot_seconds = 0.1F;
+    const float cannon_target_before = match_node(state, 3).soldiers;
+    for (int frame = 0; frame < 13; ++frame) step(state);
+    assert(match_node(state, 3).soldiers == cannon_target_before - 1.0F);
+
+    // verify a fort doubles the force needed to dislodge its defenders
+    start_level(state, 0);
+    match_node(state, 0).soldiers = 20.0F;
+    match_node(state, 1).owner = enemy_owner;
+    match_node(state, 1).kind = NodeKind::fort;
+    match_node(state, 1).soldiers = 5.0F;
+    state.mode = Mode::playing;
+    state.rules.army_speed = 100000.0F;
+    state.rules.generation_seconds = 10000.0F;
+    state.rules.enemy_think_seconds = 10000.0F;
+    assert(send_army_path(state, 0, {0, 1}, 8.0F));
+    step(state);
+    assert(match_node(state, 1).owner == enemy_owner);
+    assert(match_node(state, 1).soldiers == 1.0F);
+
+    // verify stable launches are faster and friendly ports open sea routes
+    start_level(state, 15);
+    assert(send_army(state, 1, 2, DispatchMode::one));
+    assert(state.match.armies.back().speed_scale == state.rules.stable_speed_scale);
+    start_level(state, 20);
+    const std::vector<int> sea_route = find_route(state, player_owner, 0, 3);
+    assert((sea_route == std::vector<int>{0, 1, 2, 3}));
+    match_node(state, 2).owner = neutral_owner;
+    assert(find_route(state, player_owner, 0, 3).empty());
+
+    // verify a mine sends physical gold over a friendly route into its HQ
+    start_level(state, 25);
+    state.mode = Mode::playing;
+    state.rules.generation_seconds = 10000.0F;
+    state.rules.enemy_think_seconds = 10000.0F;
+    state.rules.mine_seconds = 0.1F;
+    state.rules.gold_speed = 100000.0F;
+    const float headquarters_before = match_node(state, 0).soldiers;
+    for (int frame = 0; frame < 9; ++frame) step(state);
+    assert(match_node(state, 0).soldiers == headquarters_before + 1.0F);
+
     // verify any base can forward its chosen commitment as a direct rally
-    restart_level(state);
+    state.rules = {};
+    start_level(state, 0);
+    match_node(state, 1).owner = player_owner;
+    match_node(state, 1).kind = NodeKind::producer;
     int rally_source = -1;
     int rally_target = -1;
     for (const NodeState& node : state.match.nodes) {
@@ -126,6 +212,7 @@ int main() {
 
     // verify a selected group becomes rally sources and old orders clear on entry
     restart_level(state);
+    match_node(state, 1).owner = player_owner;
     std::vector<int> group;
     for (NodeState& node : state.match.nodes) {
         if (node.owner != player_owner || group.size() == 2) continue;
@@ -242,6 +329,8 @@ int main() {
             else enemy_attack_source = node.id;
         }
     }
+    if (player_attack_source < 0) player_attack_source = player_hq;
+    if (enemy_attack_source < 0) enemy_attack_source = enemy_hq;
     assert(player_hq >= 0 && enemy_hq >= 0);
     assert(player_attack_source >= 0 && enemy_attack_source >= 0);
     match_node(state, player_attack_source).soldiers = 10.0F;
@@ -254,6 +343,9 @@ int main() {
     step(state);
     assert(state.match.defeated_owner == enemy_owner);
     assert(state.mode == Mode::score);
+    assert(state.results[0].completed);
+    assert(state.results[0].best_score == state.last_level_score);
+    assert(state.progress_dirty);
     assert(headquarters_count(state, player_owner) == 1);
     assert(headquarters_count(state, enemy_owner) == 0);
 

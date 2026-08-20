@@ -3,6 +3,7 @@
 #include "game.hpp"
 #include "input.hpp"
 #include "level.hpp"
+#include "progress.hpp"
 #include "state.hpp"
 
 #include <SDL3/SDL.h>
@@ -10,6 +11,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <thread>
@@ -37,12 +39,16 @@ int main(int argc, char** argv) {
     bool smoke = false;
     std::string capture_path;
     std::optional<int> preview_level;
+    std::optional<int> preview_level_map;
+    bool preview_world_map = false;
     int window_width = layout_width;
     int window_height = layout_height;
     for (int index = 1; index < argc; ++index) {
         if (std::strcmp(argv[index], "--smoke") == 0) smoke = true;
         else if (std::strcmp(argv[index], "--capture") == 0 && index + 1 < argc) capture_path = argv[++index];
         else if (std::strcmp(argv[index], "--level") == 0 && index + 1 < argc) preview_level = std::stoi(argv[++index]) - 1;
+        else if (std::strcmp(argv[index], "--world-map") == 0) preview_world_map = true;
+        else if (std::strcmp(argv[index], "--level-map") == 0 && index + 1 < argc) preview_level_map = std::stoi(argv[++index]) - 1;
         else if (std::strcmp(argv[index], "--width") == 0 && index + 1 < argc) window_width = std::stoi(argv[++index]);
         else if (std::strcmp(argv[index], "--height") == 0 && index + 1 < argc) window_height = std::stoi(argv[++index]);
     }
@@ -87,7 +93,8 @@ int main(int argc, char** argv) {
 
     State state;
     std::string error;
-    if (!load_campaign(std::string(MG_ASSET_ROOT) + "/levels/campaign.json", state.levels, error)) {
+    if (!load_campaign(std::string(MG_ASSET_ROOT) + "/levels/campaign.json", state.levels,
+                       state.worlds, error)) {
         std::fprintf(stderr, "campaign load failed: %s\n", error.c_str());
         shutdown_debug();
         SDL_DestroyTexture(scene);
@@ -96,10 +103,27 @@ int main(int argc, char** argv) {
         SDL_Quit();
         return 1;
     }
+    char* preference_root = SDL_GetPrefPath("Meatgrinder", "Meatgrinder");
+    const std::filesystem::path progress_path = preference_root != nullptr
+                                                    ? std::filesystem::path{preference_root} / "progress.json"
+                                                    : std::filesystem::path{"progress.json"};
+    SDL_free(preference_root);
+    if (!load_progress(progress_path, state, error)) {
+        std::fprintf(stderr, "progress load failed: %s\n", error.c_str());
+        error.clear();
+        state.results.assign(state.levels.size(), {});
+    }
     if (preview_level.has_value() && *preview_level >= 0 &&
         *preview_level < static_cast<int>(state.levels.size())) {
         start_level(state, *preview_level);
         change_mode(state, Mode::playing);
+    } else if (preview_level_map.has_value() && *preview_level_map >= 0 &&
+               *preview_level_map < static_cast<int>(state.worlds.size())) {
+        state.selected_world = *preview_level_map;
+        state.selected_level = state.worlds[static_cast<std::size_t>(*preview_level_map)].levels.front();
+        change_mode(state, Mode::level_select);
+    } else if (preview_world_map) {
+        change_mode(state, Mode::world_select);
     }
 
     auto previous = Clock::now();
@@ -125,6 +149,14 @@ int main(int argc, char** argv) {
             step(state);
             consume_input(state.input);
             accumulator -= step_seconds;
+        }
+        if (state.progress_dirty) {
+            if (!save_progress(progress_path, state, error)) {
+                std::fprintf(stderr, "progress save failed: %s\n", error.c_str());
+                error.clear();
+            } else {
+                state.progress_dirty = false;
+            }
         }
 
         (void)SDL_SetRenderTarget(renderer, scene);

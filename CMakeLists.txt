@@ -55,9 +55,12 @@ endif()
 
 add_library(meatgrinder_core
     src/ai.cpp
+    src/campaign.cpp
     src/camera.cpp
     src/game.cpp
-    src/level.cpp)
+    src/level.cpp
+    src/mechanics.cpp
+    src/progress.cpp)
 target_include_directories(meatgrinder_core PUBLIC src)
 target_link_libraries(meatgrinder_core PUBLIC nlohmann_json::nlohmann_json)
 target_compile_definitions(meatgrinder_core PUBLIC MG_ASSET_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/assets")
@@ -76,6 +79,7 @@ target_link_libraries(meatgrinder_imgui PUBLIC SDL3::SDL3)
 add_executable(meatgrinder
     src/debug.cpp
     src/draw.cpp
+    src/draw_campaign.cpp
     src/input.cpp
     src/main.cpp)
 target_include_directories(meatgrinder PRIVATE src)

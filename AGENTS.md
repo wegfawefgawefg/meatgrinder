@@ -17,6 +17,6 @@ to developer tools. ImGui is for inspection and tuning, not shipping menu or
 game-state ownership.
 
 Run `./scripts/test.sh` before committing gameplay changes. Never add source
-IPA files, extracted HRR assets, dialogue, audio, or executable material to this
-repository. Level imports stay limited to the provenance-tracked topology fields
-documented in `docs/LEVELS.md`.
+IPA files, extracted HRR assets, dialogue, audio, executable material, or copied
+battle maps to this repository. Campaign maps and presentation remain original
+Meatgrinder work as documented in `docs/LEVELS.md`.

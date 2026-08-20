@@ -1,6 +1,7 @@
 #include "draw.hpp"
 
 #include "camera.hpp"
+#include "draw_campaign.hpp"
 #include "game.hpp"
 #include "level.hpp"
 
@@ -67,13 +68,13 @@ void draw_button(SDL_Renderer* renderer, float y, std::string_view label, bool s
 
 const char* kind_mark(NodeKind kind) {
     switch (kind) {
-    case NodeKind::castle: return "C";
+    case NodeKind::producer: return "P";
     case NodeKind::stable: return "S";
     case NodeKind::port: return "P";
     case NodeKind::cannon: return "A";
     case NodeKind::fort: return "F";
     case NodeKind::mine: return "M";
-    case NodeKind::route: return "+";
+    case NodeKind::node: return "+";
     }
     return "+";
 }
@@ -139,16 +140,27 @@ void draw_routes(SDL_Renderer* renderer, const Level& level, Vec2 center, float 
         const Vec2 b = world_to_screen(node_world_position(level, link.b), center, zoom);
         thick_line(renderer, a, b, 2.0F);
     }
+    color(renderer, 62, 132, 153);
+    for (const Link& link : level.sea_links) {
+        const Vec2 a = world_to_screen(node_world_position(level, link.a), center, zoom);
+        const Vec2 b = world_to_screen(node_world_position(level, link.b), center, zoom);
+        for (int segment = 0; segment < 9; segment += 2) {
+            const float begin = static_cast<float>(segment) / 9.0F;
+            const float end = static_cast<float>(segment + 1) / 9.0F;
+            thick_line(renderer, {std::lerp(a.x, b.x, begin), std::lerp(a.y, b.y, begin)},
+                       {std::lerp(a.x, b.x, end), std::lerp(a.y, b.y, end)}, 3.0F);
+        }
+    }
 }
 
-void draw_rallies(SDL_Renderer* renderer, const Level& level, const Match& match, Vec2 center,
+void draw_rallies(SDL_Renderer* renderer, const Level& level, const State& state, Vec2 center,
                   float zoom) {
     color(renderer, 87, 205, 207);
-    for (const NodeState& node : match.nodes) {
+    for (const NodeState& node : state.match.nodes) {
         if (node.rally_target < 0) continue;
         if (node.rally_assault) color(renderer, 87, 205, 207);
         else color(renderer, 239, 157, 77);
-        const std::vector<int> path = find_path(level, node.id, node.rally_target);
+        const std::vector<int> path = find_route(state, node.owner, node.id, node.rally_target);
         for (std::size_t index = 1; index < path.size(); ++index) {
             const Vec2 a = world_to_screen(node_world_position(level, path[index - 1]), center, zoom);
             const Vec2 b = world_to_screen(node_world_position(level, path[index]), center, zoom);
@@ -169,7 +181,7 @@ void draw_pending_rallies(SDL_Renderer* renderer, const State& state, const Leve
     else color(renderer, 255, 228, 113);
     for (int source_id : state.rally_sources) {
         const Vec2 source = world_to_screen(node_world_position(level, source_id), center, zoom);
-        const std::vector<int> path = target >= 0 ? find_path(level, source_id, target)
+        const std::vector<int> path = target >= 0 ? find_route(state, player_owner, source_id, target)
                                                   : std::vector<int>{};
         if (path.size() >= 2) {
             for (std::size_t index = 1; index < path.size(); ++index) {
@@ -186,6 +198,49 @@ void draw_pending_rallies(SDL_Renderer* renderer, const State& state, const Leve
     }
 }
 
+void draw_node_shape(SDL_Renderer* renderer, const NodeState& node, Vec2 point, float size) {
+    owner_color(renderer, node.owner, true);
+    const float left = point.x - size * 0.5F;
+    const float top = point.y - size * 0.4F;
+    if (node.kind == NodeKind::node) {
+        fill(renderer, point.x - size * 0.34F, point.y - size * 0.34F, size * 0.68F, size * 0.68F);
+    } else if (node.kind == NodeKind::producer) {
+        fill(renderer, left, top, size, size * 0.8F);
+        for (int tooth = 0; tooth < 3; ++tooth) {
+            fill(renderer, left + static_cast<float>(tooth) * size * 0.38F, top - size * 0.16F,
+                 size * 0.24F, size * 0.18F);
+        }
+    } else if (node.kind == NodeKind::fort) {
+        fill(renderer, left, top - size * 0.12F, size, size * 0.92F);
+        fill(renderer, left - size * 0.14F, top - size * 0.25F, size * 0.28F, size * 1.05F);
+        fill(renderer, left + size * 0.86F, top - size * 0.25F, size * 0.28F, size * 1.05F);
+    } else if (node.kind == NodeKind::stable) {
+        fill(renderer, left, top, size, size * 0.8F);
+        owner_color(renderer, node.owner);
+        thick_line(renderer, {left - size * 0.08F, top}, {point.x, top - size * 0.36F}, 3.0F);
+        thick_line(renderer, {point.x, top - size * 0.36F}, {left + size * 1.08F, top}, 3.0F);
+    } else if (node.kind == NodeKind::port) {
+        fill(renderer, left, top, size, size * 0.55F);
+        fill(renderer, point.x - size * 0.12F, top + size * 0.5F, size * 0.24F, size * 0.42F);
+        color(renderer, 65, 151, 174);
+        thick_line(renderer, {left - size * 0.2F, top + size},
+                   {left + size * 1.2F, top + size}, 3.0F);
+    } else if (node.kind == NodeKind::cannon) {
+        fill(renderer, left, top + size * 0.15F, size * 0.72F, size * 0.58F);
+        owner_color(renderer, node.owner);
+        thick_line(renderer, {point.x - size * 0.08F, point.y - size * 0.02F},
+                   {point.x + size * 0.68F, point.y - size * 0.48F}, 7.0F);
+    } else {
+        fill(renderer, left, top + size * 0.12F, size, size * 0.68F);
+        owner_color(renderer, node.owner);
+        thick_line(renderer, {left, top + size * 0.12F}, {point.x, top - size * 0.35F}, 3.0F);
+        thick_line(renderer, {point.x, top - size * 0.35F},
+                   {left + size, top + size * 0.12F}, 3.0F);
+    }
+    owner_color(renderer, node.owner);
+    outline(renderer, left, top, size, size * 0.8F);
+}
+
 void draw_nodes(SDL_Renderer* renderer, const Level& level, const Match& match, Vec2 center,
                 float zoom) {
     char count[32];
@@ -193,10 +248,7 @@ void draw_nodes(SDL_Renderer* renderer, const Level& level, const Match& match, 
     const float font_scale = std::clamp(zoom, 0.8F, 1.35F);
     for (const NodeState& node : match.nodes) {
         const Vec2 point = world_to_screen(node_world_position(level, node.id), center, zoom);
-        owner_color(renderer, node.owner, true);
-        fill(renderer, point.x - size * 0.5F, point.y - size * 0.4F, size, size * 0.8F);
-        owner_color(renderer, node.owner);
-        outline(renderer, point.x - size * 0.5F, point.y - size * 0.4F, size, size * 0.8F);
+        draw_node_shape(renderer, node, point, size);
         if (node.selected) {
             color(renderer, 255, 228, 113);
             thick_outline(renderer, point.x - size * 0.65F, point.y - size * 0.55F, size * 1.3F,
@@ -211,6 +263,45 @@ void draw_nodes(SDL_Renderer* renderer, const Level& level, const Match& match, 
             color(renderer, 255, 228, 113);
             text(renderer, point.x - 8.0F * font_scale, point.y - size * 0.85F, "HQ", font_scale);
         }
+    }
+}
+
+void draw_specialists(SDL_Renderer* renderer, const Level& level, const Match& match, Vec2 center,
+                      float zoom, float alpha) {
+    color(renderer, 177, 94, 62);
+    for (const NodeState& node : match.nodes) {
+        if (node.kind != NodeKind::cannon || node.cannon_target < 0) continue;
+        const Vec2 a = world_to_screen(node_world_position(level, node.id), center, zoom);
+        const Vec2 b = world_to_screen(node_world_position(level, node.cannon_target), center, zoom);
+        for (int segment = 0; segment < 12; segment += 2) {
+            const float begin = static_cast<float>(segment) / 12.0F;
+            const float end = static_cast<float>(segment + 1) / 12.0F;
+            thick_line(renderer, {std::lerp(a.x, b.x, begin), std::lerp(a.y, b.y, begin)},
+                       {std::lerp(a.x, b.x, end), std::lerp(a.y, b.y, end)}, 1.0F);
+        }
+    }
+    for (const CannonShot& shot : match.cannon_shots) {
+        const Vec2 a = node_world_position(level, shot.source);
+        const Vec2 b = node_world_position(level, shot.target);
+        const float progress = std::clamp(std::lerp(shot.previous_progress, shot.progress, alpha),
+                                          0.0F, 1.0F);
+        Vec2 world{std::lerp(a.x, b.x, progress), std::lerp(a.y, b.y, progress)};
+        world.y -= std::sin(progress * 3.14159265F) * 90.0F;
+        const Vec2 point = world_to_screen(world, center, zoom);
+        owner_color(renderer, shot.owner);
+        fill(renderer, point.x - 5.0F, point.y - 5.0F, 10.0F, 10.0F);
+    }
+    for (const GoldShipment& gold : match.gold_shipments) {
+        if (gold.path.empty()) continue;
+        const Vec2 a = node_world_position(level, gold.path[static_cast<std::size_t>(gold.leg)]);
+        const Vec2 b = node_world_position(level, gold.path[static_cast<std::size_t>(gold.leg + 1)]);
+        const float progress = std::lerp(gold.previous_progress, gold.progress, alpha);
+        const Vec2 point = world_to_screen({std::lerp(a.x, b.x, progress),
+                                             std::lerp(a.y, b.y, progress)}, center, zoom);
+        color(renderer, 238, 194, 64);
+        fill(renderer, point.x - 7.0F, point.y - 7.0F, 14.0F, 14.0F);
+        color(renderer, 255, 235, 145);
+        outline(renderer, point.x - 7.0F, point.y - 7.0F, 14.0F, 14.0F);
     }
 }
 
@@ -237,8 +328,9 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
     const float zoom = interpolated_camera_zoom(state.camera, alpha);
     draw_tiles(renderer, level, center, zoom);
     draw_routes(renderer, level, center, zoom);
-    draw_rallies(renderer, level, state.match, center, zoom);
+    draw_rallies(renderer, level, state, center, zoom);
     draw_pending_rallies(renderer, state, level, center, zoom);
+    draw_specialists(renderer, level, state.match, center, zoom, alpha);
     draw_armies(renderer, level, state.match, center, zoom, alpha);
     draw_nodes(renderer, level, state.match, center, zoom);
     color(renderer, 25, 27, 25, 235);
@@ -246,8 +338,8 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
     fill(renderer, 0.0F, 674.0F, static_cast<float>(layout_width), 46.0F);
     color(renderer, 231, 224, 196);
     char status[128];
-    std::snprintf(status, sizeof(status), "LEVEL %d   TIME %02d:%02d   SCORE %d",
-                  state.campaign_level + 1, static_cast<int>(state.match.stats.elapsed_seconds) / 60,
+    std::snprintf(status, sizeof(status), "%s   TIME %02d:%02d   SCORE %d",
+                  level.id.c_str(), static_cast<int>(state.match.stats.elapsed_seconds) / 60,
                   static_cast<int>(state.match.stats.elapsed_seconds) % 60, state.campaign_score);
     text(renderer, 24.0F, 18.0F, status, 1.5F);
     std::snprintf(status, sizeof(status), "ENEMY %s / %s", ai_style_name(state.match.ai_style),
@@ -318,10 +410,14 @@ void draw_level_card(SDL_Renderer* renderer, const State& state) {
     color(renderer, 190, 52, 45);
     fill(renderer, x, 260.0F, static_cast<float>(layout_width), 200.0F);
     color(renderer, 255, 237, 215);
-    char title[64];
-    std::snprintf(title, sizeof(title), "LEVEL %d", state.campaign_level + 1);
+    const Level& level = state.levels[static_cast<std::size_t>(state.campaign_level)];
+    char title[96];
+    std::snprintf(title, sizeof(title), "%s  %s", level.id.c_str(), level.name.c_str());
     const float width = static_cast<float>(std::string_view(title).size()) * 8.0F * 4.0F;
     text(renderer, x + (static_cast<float>(layout_width) - width) * 0.5F, 325.0F, title, 4.0F);
+    const float briefing_width = static_cast<float>(level.briefing.size()) * 8.0F;
+    text(renderer, x + (static_cast<float>(layout_width) - briefing_width) * 0.5F, 410.0F,
+         level.briefing, 1.0F);
 }
 
 void draw_overlay_screen(SDL_Renderer* renderer, const State& state) {
@@ -334,7 +430,7 @@ void draw_overlay_screen(SDL_Renderer* renderer, const State& state) {
     } else if (state.mode == Mode::defeat) {
         centered_text(renderer, 180.0F, "THE LINE BROKE", 3.0F);
         draw_button(renderer, 340.0F, "RETRY", state.menu_choice == 0);
-        draw_button(renderer, 405.0F, "QUIT TO MENU", state.menu_choice == 1);
+        draw_button(renderer, 405.0F, "QUIT TO MAP", state.menu_choice == 1);
     } else if (state.mode == Mode::score) {
         centered_text(renderer, 105.0F, "FRONT SECURED", 3.0F);
         char line[128];
@@ -350,7 +446,7 @@ void draw_overlay_screen(SDL_Renderer* renderer, const State& state) {
         text(renderer, 430.0F, 385.0F, line, 2.0F);
         std::snprintf(line, sizeof(line), "GEN CYCLES           %d", state.match.stats.generations);
         text(renderer, 430.0F, 430.0F, line, 2.0F);
-        std::snprintf(line, sizeof(line), "CAMPAIGN SCORE       %d", state.campaign_score);
+        std::snprintf(line, sizeof(line), "LEVEL SCORE          %d", state.last_level_score);
         text(renderer, 430.0F, 485.0F, line, 2.0F);
         centered_text(renderer, 585.0F, "PRESS TO CONTINUE", 1.5F);
     } else {
@@ -368,6 +464,11 @@ void draw_overlay_screen(SDL_Renderer* renderer, const State& state) {
 void draw(SDL_Renderer* renderer, const State& state, float alpha) {
     if (state.mode == Mode::main_menu) draw_main_menu(renderer, state);
     else if (state.mode == Mode::options) draw_options(renderer, state);
+    else if (state.mode == Mode::world_select || state.mode == Mode::world_unlock ||
+             state.mode == Mode::world_zoom ||
+             state.mode == Mode::level_select || state.mode == Mode::level_zoom) {
+        draw_campaign_screen(renderer, state);
+    }
     else if (state.mode == Mode::level_card) draw_level_card(renderer, state);
     else if (state.mode == Mode::playing) draw_playing(renderer, state, alpha);
     else draw_overlay_screen(renderer, state);

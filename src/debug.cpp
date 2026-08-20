@@ -19,14 +19,21 @@ void draw_debug(State& state, SDL_Renderer* renderer) {
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
     if (state.debug_open) {
-        ImGui::SetNextWindowSize(ImVec2(360.0F, 470.0F), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(380.0F, 580.0F), ImGuiCond_FirstUseEver);
         if (ImGui::Begin("Meatgrinder developer tools", &state.debug_open)) {
             ImGui::Text("Level %d / %d", state.campaign_level + 1, static_cast<int>(state.levels.size()));
             ImGui::Text("Nodes: %d", static_cast<int>(state.match.nodes.size()));
             ImGui::Text("Armies: %d", static_cast<int>(state.match.armies.size()));
+            ImGui::Text("Shots / gold: %d / %d", static_cast<int>(state.match.cannon_shots.size()),
+                        static_cast<int>(state.match.gold_shipments.size()));
             ImGui::SeparatorText("Rules");
             ImGui::SliderFloat("Army speed", &state.rules.army_speed, 10.0F, 180.0F, "%.0f px/s");
             ImGui::SliderFloat("GEN interval", &state.rules.generation_seconds, 3.0F, 30.0F, "%.1f s");
+            ImGui::SliderFloat("Cannon interval", &state.rules.cannon_seconds, 0.5F, 8.0F, "%.1f s");
+            ImGui::SliderFloat("Mine interval", &state.rules.mine_seconds, 2.0F, 20.0F, "%.1f s");
+            ImGui::SliderFloat("Gold speed", &state.rules.gold_speed, 4.0F, 40.0F, "%.0f px/s");
+            ImGui::SliderFloat("Stable speed", &state.rules.stable_speed_scale, 1.0F, 3.0F, "%.2fx");
+            ImGui::SliderFloat("Fort defense", &state.rules.fort_defense_scale, 1.0F, 3.0F, "%.2fx");
             ImGui::SliderFloat("AI interval", &state.rules.enemy_think_seconds, 0.15F, 4.0F, "%.2f s");
             ImGui::SliderFloat("AI dispatch", &state.rules.enemy_aggression, 0.1F, 0.9F);
             int difficulty = static_cast<int>(state.ai_difficulty);

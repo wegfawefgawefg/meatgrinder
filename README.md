@@ -6,9 +6,9 @@ counterattack. It begins with the useful mechanical shape of *Hills and Rivers
 Remain*, then intentionally develops its own rules and presentation.
 
 This repository is private and experimental. It contains no original game art,
-audio, dialogue, executable code, or menu design. The first campaign preserves
-only recovered main-story battle topology: node placement, links, base kinds,
-starting sides, and garrisons. Background tiles are generated Meatgrinder data.
+audio, dialogue, executable code, menu design, or battle maps. Its campaign,
+rules, worlds, level progression, and generated background tiles are original
+Meatgrinder material.
 
 ## Build and play
 
@@ -58,18 +58,24 @@ condition. Army packets travel at 20 world pixels per second.
 
 ## Current first-pass rules
 
-Map letters preserve recovered location kinds: C castle, S stable, P port, A
-cannon, F fort, M mine, and + route. They currently share the same production
-and combat rules.
+Ordinary nodes hold territory but produce nothing. Producers and HQs receive
+one soldier on the four-second GEN shown in the HUD. Cannons fire one delayed
+shot every two seconds at their authored target, forts make defenders count
+twice, armies launched from stables move 50 percent faster, friendly port pairs
+open sea edges, and mines send slow gold shipments toward HQ; each shipment
+that arrives creates one HQ soldier.
 
-Every owned base receives one soldier on the discrete GEN shown in the HUD. A
-rally order forwards its stored commitment from that base on every GEN toward
-its target and remains visibly drawn until cleared. Friendly arrivals merge and
-hostile arrivals resolve against the local garrison. Assault orders capture
-intermediate positions; direct orders ignore them. Enemy personalities rotate
-between balanced, aggressive, turtle, and small-packet swarm strategies. Their
-weighted decisions can attack, expand, wait, or feed rear surplus through
-friendly routes to a promising or threatened frontline.
+The original campaign contains six worlds of five levels. Each world introduces
+one mechanic in isolation before combining it with earlier systems. Level 3 is
+an optional branch and Level 5 opens the next world. Completed levels retain a
+best score and time in the platform save directory. World and level maps use
+camera zoom transitions when entering their next layer.
+
+A rally order forwards its stored commitment from an occupied node on every GEN and
+remains visibly drawn until cleared. Friendly arrivals merge and hostile
+arrivals resolve against the local garrison. Assault orders capture intermediate
+positions; direct orders ignore them. Weighted enemy personalities attack,
+expand, wait, or feed rear surplus through friendly routes to a useful front.
 
 See [docs/DESIGN.md](docs/DESIGN.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 and [docs/LEVELS.md](docs/LEVELS.md) for the current rules, ownership, and

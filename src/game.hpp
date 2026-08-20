@@ -11,6 +11,7 @@ bool send_army(State& state, int source_id, int target_id, DispatchMode mode, bo
 bool send_army_path(State& state, int source_id, std::vector<int> path, float soldiers,
                     bool assault = true);
 std::vector<int> find_path(const Level& level, int source_id, int target_id);
+std::vector<int> find_route(const State& state, int owner, int source_id, int target_id);
 bool set_rally_order(State& state, int source_id, int target_id, bool assault = true,
                      DispatchMode mode = DispatchMode::half);
 bool begin_selected_rally_orders(State& state);

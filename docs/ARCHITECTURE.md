@@ -4,9 +4,10 @@ Meatgrinder follows the direct architecture used by Adventures with Chickens
 Remastered: plain state, authored data loaded up front, one visible fixed-step
 loop, and domain functions that mutate the state they receive.
 
-`State` owns the current mode, campaign position, input, options, and mutable
-match. `Level` is immutable authored content. `Match` is created from a level
-and contains changing garrisons, moving armies, AI clocks, and statistics.
+`State` owns worlds, levels, results, current selection, input, options, and the
+mutable match. `Level` and `World` are immutable authored content. `Match` is
+created from a level and contains changing garrisons, armies, cannon shots, gold
+shipments, AI clocks, and statistics.
 There is no scene graph, event bus, ECS, service locator, or hidden scheduler.
 
 The host pumps SDL events, executes `step()` in 1/60-second increments, then
@@ -21,18 +22,22 @@ sampling. Mouse coordinates apply the inverse presentation transform. Thin
 world geometry is rasterized at two or three internal pixels before scaling, so
 routes and selection boxes survive non-native window sizes.
 
-Modes are explicit: main menu, options, level card, playing, pause, result,
-score, and campaign complete. Transitions are direct assignments with a reset
-mode clock. ImGui is a developer overlay only; shipping screens are drawn by the
-game renderer.
+Modes are explicit: main menu, options, world select/unlock/zoom, level
+select/zoom/card, playing, pause, defeat, score, and campaign complete. Zoom
+screens transform the same authored map positions before entering the next
+layer. ImGui is a developer overlay only.
 
 Files remain split by concrete domain:
 
 - `level.*`: JSON decoding and authored validation.
+- `campaign.*`: unlock rules, map navigation, and result updates.
+- `progress.*`: small ID-keyed best score/time save file.
+- `mechanics.*`: ownership-gated routes, cannon fire, and mine shipments.
 - `camera.*`: tile-world framing, manual movement, zoom, and interpolation.
 - `ai.*`: weighted enemy decisions, soft objectives, threats, and supply movement.
 - `game.*`: campaign/match creation, commands, movement, combat, and outcomes.
 - `input.*`: SDL event translation and pointer gestures.
-- `draw.*`: tiles, routes, nodes, troops, screens, and interpolation.
+- `draw.*`: battles, specialist silhouettes, troops, and interpolation.
+- `draw_campaign.*`: world/level maps and zoom transitions.
 - `debug.*`: optional ImGui inspection and rule tuning.
 - `main.cpp`: SDL ownership and the fixed-step loop.

@@ -1,6 +1,7 @@
 #include "ai.hpp"
 
 #include "game.hpp"
+#include "mechanics.hpp"
 
 #include <algorithm>
 #include <array>
@@ -98,11 +99,13 @@ float rear_reserve(AiStyle style) {
     return 5.0F;
 }
 
-float route_defense(const Match& match, const std::vector<int>& path, int owner) {
+float route_defense(const State& state, const std::vector<int>& path, int owner) {
     float defense = 0.0F;
     for (std::size_t index = 1; index < path.size(); ++index) {
-        const NodeState* node = find_node(match, path[index]);
-        if (node != nullptr && node->owner != owner) defense += node->soldiers + 1.0F;
+        const NodeState* node = find_node(state.match, path[index]);
+        if (node == nullptr || node->owner == owner) continue;
+        const float scale = node->kind == NodeKind::fort ? state.rules.fort_defense_scale : 1.0F;
+        defense += node->soldiers * scale + 1.0F;
     }
     return defense;
 }
@@ -121,36 +124,6 @@ bool is_frontline(const Level& level, const Match& match, int node_id, int owner
         if (neighbor != nullptr && neighbor->owner != owner) return true;
     }
     return false;
-}
-
-std::vector<int> owned_path_between(const Level& level, const Match& match, int start, int goal,
-                                    int owner) {
-    constexpr int slot_count = 100;
-    std::vector<int> previous(slot_count, -1);
-    std::queue<int> open;
-    previous[static_cast<std::size_t>(start)] = start;
-    open.push(start);
-    while (!open.empty() && previous[static_cast<std::size_t>(goal)] < 0) {
-        const int current = open.front();
-        open.pop();
-        for (const Link& link : level.links) {
-            const int next = link.a == current ? link.b : link.b == current ? link.a : -1;
-            const NodeState* node = find_node(match, next);
-            if (next >= 0 && node != nullptr && node->owner == owner &&
-                previous[static_cast<std::size_t>(next)] < 0) {
-                previous[static_cast<std::size_t>(next)] = current;
-                open.push(next);
-            }
-        }
-    }
-    if (previous[static_cast<std::size_t>(goal)] < 0) return {};
-    std::vector<int> path;
-    for (int at = goal;; at = previous[static_cast<std::size_t>(at)]) {
-        path.push_back(at);
-        if (at == start) break;
-    }
-    std::ranges::reverse(path);
-    return path;
 }
 
 float inbound_soldiers(const Match& match, int owner, int target_id) {
@@ -180,6 +153,12 @@ float threatening_soldiers(const Match& match, int owner, int target_id) {
 float strategic_score(const Match& match, const NodeState& target) {
     float score = target.owner == player_owner ? 30.0F : 8.0F;
     if (target.headquarters) score += 45.0F;
+    if (target.kind == NodeKind::producer) score += 18.0F;
+    else if (target.kind == NodeKind::cannon) score += 28.0F;
+    else if (target.kind == NodeKind::mine) score += 24.0F;
+    else if (target.kind == NodeKind::port) score += 18.0F;
+    else if (target.kind == NodeKind::stable) score += 12.0F;
+    else if (target.kind == NodeKind::fort) score += 10.0F;
     score -= target.soldiers * 0.25F;
     score -= inbound_soldiers(match, enemy_owner, target.id) * 0.15F;
     return score;
@@ -207,7 +186,6 @@ void update_objective(State& state, float switch_margin) {
 }
 
 std::vector<Action> attack_actions(const State& state, const std::vector<int>& used_sources) {
-    const Level& level = state.levels[static_cast<std::size_t>(state.campaign_level)];
     const float fraction = attack_fraction(state);
     const float minimum = minimum_force(state.match.ai_style);
     std::vector<Action> actions;
@@ -216,10 +194,10 @@ std::vector<Action> attack_actions(const State& state, const std::vector<int>& u
             std::ranges::find(used_sources, source.id) != used_sources.end()) continue;
         for (const NodeState& target : state.match.nodes) {
             if (target.owner == enemy_owner) continue;
-            std::vector<int> path = find_path(level, source.id, target.id);
+            std::vector<int> path = find_route(state, enemy_owner, source.id, target.id);
             if (path.size() < 2) continue;
             const float committed = std::floor(source.soldiers * fraction);
-            const float defense = route_defense(state.match, path, enemy_owner);
+            const float defense = route_defense(state, path, enemy_owner);
             if (!viable_attack(state.match.ai_style, committed, defense)) continue;
             float score = committed - defense * 1.35F -
                           static_cast<float>(path.size()) * 1.7F + strategic_score(state.match, target);
@@ -280,8 +258,8 @@ std::vector<Action> reinforce_actions(const State& state, const std::vector<int>
                 donor.soldiers < reserve + 1.0F ||
                 is_frontline(level, state.match, donor.id, enemy_owner) ||
                 std::ranges::find(used_sources, donor.id) != used_sources.end()) continue;
-            std::vector<int> path = owned_path_between(level, state.match, donor.id, staging.id,
-                                                       enemy_owner);
+            std::vector<int> path = friendly_path(level, state.match, enemy_owner, donor.id,
+                                                  staging.id);
             if (path.size() < 2) continue;
             const float soldiers = std::min(std::floor(donor.soldiers - reserve),
                                             std::ceil(need));

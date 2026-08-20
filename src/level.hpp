@@ -6,6 +6,6 @@
 #include <string>
 
 bool load_campaign(const std::filesystem::path& path, std::vector<Level>& levels,
-                   std::string& error);
+                   std::vector<World>& worlds, std::string& error);
 int node_position(const Level& level, int id);
 Vec2 node_world_position(const Level& level, int id);
