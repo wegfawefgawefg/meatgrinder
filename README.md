@@ -42,6 +42,9 @@ Controls:
 - WASD or arrow keys pan; the mouse wheel zooms. Escape pauses or backs out.
 - F1 opens developer tools; F11 toggles fullscreen.
 
+Options select weak, normal, or hard AI difficulty independently of each
+level's balanced, aggressive, turtle, or swarm personality.
+
 The simulation advances at a fixed 60 Hz. The game rasterizes into a 1280x720
 internal framebuffer and nearest-neighbor presents it into the external window.
 Rendering interpolates moving troops and the player-controlled camera without
@@ -54,9 +57,9 @@ rally order forwards its stored commitment from that base on every GEN toward
 its target and remains visibly drawn until cleared. Friendly arrivals merge and
 hostile arrivals resolve against the local garrison. Assault orders capture
 intermediate positions; direct orders ignore them. Enemy personalities rotate
-between balanced, aggressive, turtle, and small-packet swarm strategies. When
-an attack is not viable, rear bases feed surplus troops through friendly routes
-to the frontline with the strongest current opportunity.
+between balanced, aggressive, turtle, and small-packet swarm strategies. Their
+weighted decisions can attack, expand, wait, or feed rear surplus through
+friendly routes to a promising or threatened frontline.
 
 See [docs/DESIGN.md](docs/DESIGN.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 and [docs/LEVELS.md](docs/LEVELS.md) for the current rules, ownership, and

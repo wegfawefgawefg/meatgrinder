@@ -236,7 +236,9 @@ void step_frontend(State& state) {
         }
         if (activate) {
             if (state.options_choice == 0) {
-                state.rules.enemy_aggression = state.rules.enemy_aggression < 0.55F ? 0.65F : 0.40F;
+                const int direction = state.input.left_pressed ? 2 : 1;
+                const int next = (static_cast<int>(state.ai_difficulty) + direction) % 3;
+                state.ai_difficulty = static_cast<AiDifficulty>(next);
             } else if (state.options_choice == 1) {
                 state.fullscreen = !state.fullscreen;
             } else {

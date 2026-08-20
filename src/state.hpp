@@ -55,6 +55,19 @@ enum class AiStyle {
     swarm,
 };
 
+enum class AiDifficulty {
+    weak,
+    normal,
+    hard,
+};
+
+enum class AiBehavior {
+    wait,
+    attack,
+    reinforce,
+    expand,
+};
+
 enum class DispatchMode {
     one,
     half,
@@ -115,6 +128,14 @@ struct MatchStats {
     int headquarters_moves{};
 };
 
+struct AiMind {
+    int objective{-1};
+    float objective_score{};
+    AiBehavior last_behavior{AiBehavior::wait};
+    int decisions{};
+    int orders{};
+};
+
 struct Match {
     std::vector<NodeState> nodes;
     std::vector<Army> armies;
@@ -123,6 +144,7 @@ struct Match {
     float generation_clock{};
     float outcome_clock{};
     AiStyle ai_style{AiStyle::balanced};
+    AiMind ai;
 };
 
 struct InputState {
@@ -173,6 +195,7 @@ struct State {
     int options_choice{};
     int campaign_score{};
     int completed_levels{};
+    AiDifficulty ai_difficulty{AiDifficulty::normal};
     float mode_seconds{};
     bool fullscreen{};
     bool debug_open{};

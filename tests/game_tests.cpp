@@ -1,4 +1,5 @@
 #include "camera.hpp"
+#include "ai.hpp"
 #include "game.hpp"
 #include "level.hpp"
 
@@ -256,10 +257,10 @@ int main() {
     match_node(state, defended_target).soldiers = 60.0F;
     match_node(state, defended_target).headquarters = true;
     state.match.ai_style = AiStyle::balanced;
+    state.ai_difficulty = AiDifficulty::hard;
     state.mode = Mode::playing;
     state.rules.generation_seconds = 10000.0F;
-    state.rules.enemy_think_seconds = 0.85F;
-    for (int frame = 0; frame < 60; ++frame) step(state);
+    run_enemy_decision(state);
     const auto supply = std::ranges::find_if(state.match.armies, [supply_stage](const Army& army) {
         return army.owner == enemy_owner && army.path.back() == supply_stage;
     });
@@ -267,6 +268,69 @@ int main() {
     assert(std::ranges::all_of(supply->path, [&state](int node_id) {
         return match_node(state, node_id).owner == enemy_owner;
     }));
+
+    // verify objectives resist tiny score flicker but switch on a material improvement
+    state.match.armies.clear();
+    int alternate_target = -1;
+    for (NodeState& node : state.match.nodes) {
+        if (node.id == defended_target || node.owner != enemy_owner) continue;
+        alternate_target = node.id;
+        break;
+    }
+    assert(alternate_target >= 0);
+    match_node(state, alternate_target).owner = player_owner;
+    match_node(state, alternate_target).soldiers = 39.0F;
+    match_node(state, defended_target).soldiers = 40.0F;
+    match_node(state, defended_target).headquarters = false;
+    state.match.ai.objective = defended_target;
+    run_enemy_decision(state);
+    assert(state.match.ai.objective == defended_target);
+    match_node(state, alternate_target).soldiers = 0.0F;
+    run_enemy_decision(state);
+    assert(state.match.ai.objective == alternate_target);
+    match_node(state, alternate_target).owner = enemy_owner;
+    run_enemy_decision(state);
+    assert(state.match.ai.objective == defended_target);
+
+    // verify inbound player troops interrupt even a weak AI's possible WAIT roll
+    start_level(state, 0);
+    for (NodeState& node : state.match.nodes) {
+        node.owner = enemy_owner;
+        node.soldiers = 2.0F;
+        node.headquarters = false;
+    }
+    match_node(state, supply_source).soldiers = 50.0F;
+    match_node(state, defended_target).owner = player_owner;
+    match_node(state, defended_target).soldiers = 60.0F;
+    state.match.armies.push_back({
+        .owner = player_owner,
+        .soldiers = 10.0F,
+        .path = {defended_target, supply_stage},
+    });
+    state.ai_difficulty = AiDifficulty::weak;
+    run_enemy_decision(state);
+    assert(state.match.ai.last_behavior == AiBehavior::reinforce);
+    assert(std::ranges::any_of(state.match.armies, [supply_stage](const Army& army) {
+        return army.owner == enemy_owner && army.path.back() == supply_stage;
+    }));
+
+    // verify hard difficulty can issue two commands without reusing a source
+    start_level(state, 0);
+    for (NodeState& node : state.match.nodes) {
+        node.owner = player_owner;
+        node.soldiers = 1.0F;
+        node.headquarters = false;
+    }
+    match_node(state, supply_source).owner = enemy_owner;
+    match_node(state, supply_source).soldiers = 50.0F;
+    match_node(state, supply_stage).owner = enemy_owner;
+    match_node(state, supply_stage).soldiers = 50.0F;
+    state.match.ai_style = AiStyle::aggressive;
+    state.ai_difficulty = AiDifficulty::hard;
+    run_enemy_decision(state);
+    assert(state.match.ai.orders == 2);
+    assert(state.match.armies.size() == 2);
+    assert(state.match.armies[0].path.front() != state.match.armies[1].path.front());
 
     const Vec2 aligned = node_world_position(state.levels.front(), state.levels.front().nodes[0].id);
     assert(std::fmod(aligned.x, 64.0F) == 32.0F);

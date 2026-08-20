@@ -26,8 +26,8 @@ shows the countdown. Pressing R with one or more owned bases selected enters
 rally creation; the next left-click sets an assault rally, or a direct rally
 while Control is held. Entering rally creation clears the old orders, so Escape
 intentionally leaves those bases unordered. A box selection can assign the same
-rally to many sources. Each
-GEN forwards the rally's stored one, half, or all-but-one commitment along its
+rally to many sources. Each GEN forwards the rally's stored one, half, or
+all-but-one commitment along its
 persistent route. Source markers and colored paths remain visible until C clears
 selected orders, or C enters click-to-clear mode with no selection. Headquarters
 remains a relocatable strategic identity but is not the only production faucet.
@@ -40,11 +40,21 @@ Enemy controllers evaluate full routes, accumulated defense, distance, player
 ownership, and headquarters value. Campaign levels rotate four personalities:
 balanced waits for efficient attacks, aggressive accepts attrition to pressure
 HQ, turtle accumulates a large favorable attack, and swarm repeatedly sends
-small packets at nearby weak points. If none can justify an attack, a logistics
-pass identifies the most useful frontline staging base and transfers surplus
-from rear territory along an entirely friendly route. Troops already in transit
-count toward the staging requirement, preventing blind over-supply. The styles
-share readable rules rather than hidden bonuses.
+small packets at nearby weak points. Logistics candidates identify useful
+frontline staging bases and transfer surplus from rear territory along entirely
+friendly routes. Troops already in transit count toward staging requirements,
+preventing blind over-supply.
+
+Each decision evaluates every node and builds attack, expansion, reinforcement,
+and wait candidates. Personality weights choose the kind of action; difficulty
+controls idle weight, evaluation error, reaction interval, and a global action
+budget. Weak AI often waits, while hard AI can issue two non-conflicting orders.
+The current strategic objective receives a small score bonus and changes only
+when another target wins by a meaningful margin. The board is still rescored on
+every decision, and hostile troops inbound to an owned base trigger immediate
+reinforcement without waiting on the behavior roll. Troops already marching
+keep their original route. The styles share readable rules rather than hidden
+combat bonuses.
 
 Troop commitment is selected with number keys: one soldier, half the garrison,
 or all but one. The same mode drives one-shot and rally orders, making probes,

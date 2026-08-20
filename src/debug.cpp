@@ -29,12 +29,21 @@ void draw_debug(State& state, SDL_Renderer* renderer) {
             ImGui::SliderFloat("GEN interval", &state.rules.generation_seconds, 3.0F, 30.0F, "%.1f s");
             ImGui::SliderFloat("AI interval", &state.rules.enemy_think_seconds, 0.15F, 4.0F, "%.2f s");
             ImGui::SliderFloat("AI dispatch", &state.rules.enemy_aggression, 0.1F, 0.9F);
+            int difficulty = static_cast<int>(state.ai_difficulty);
+            if (ImGui::Combo("AI difficulty", &difficulty, "Weak\0Normal\0Hard\0")) {
+                state.ai_difficulty = static_cast<AiDifficulty>(difficulty);
+            }
             ImGui::SeparatorText("Match");
             ImGui::Text("Next GEN: %.2f", state.rules.generation_seconds -
                                                state.match.generation_clock);
             ImGui::Text("Camera: %.0f, %.0f @ %.2f", state.camera.center.x,
                         state.camera.center.y, state.camera.zoom);
             ImGui::Text("AI style: %d", static_cast<int>(state.match.ai_style));
+            ImGui::Text("AI objective: %d (%.1f)", state.match.ai.objective,
+                        state.match.ai.objective_score);
+            ImGui::Text("AI behavior: %d", static_cast<int>(state.match.ai.last_behavior));
+            ImGui::Text("AI decisions/orders: %d / %d", state.match.ai.decisions,
+                        state.match.ai.orders);
             const char* dispatch = state.dispatch_mode == DispatchMode::one ? "one"
                                    : state.dispatch_mode == DispatchMode::half ? "half"
                                                                               : "all but one";

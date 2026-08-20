@@ -88,6 +88,12 @@ const char* ai_style_name(AiStyle style) {
     return "BALANCED";
 }
 
+const char* ai_difficulty_name(AiDifficulty difficulty) {
+    if (difficulty == AiDifficulty::weak) return "WEAK";
+    if (difficulty == AiDifficulty::hard) return "HARD";
+    return "NORMAL";
+}
+
 const char* dispatch_name(DispatchMode mode) {
     if (mode == DispatchMode::one) return "1";
     if (mode == DispatchMode::half) return "HALF";
@@ -244,7 +250,8 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
                   state.campaign_level + 1, static_cast<int>(state.match.stats.elapsed_seconds) / 60,
                   static_cast<int>(state.match.stats.elapsed_seconds) % 60, state.campaign_score);
     text(renderer, 24.0F, 18.0F, status, 1.5F);
-    std::snprintf(status, sizeof(status), "ENEMY %s", ai_style_name(state.match.ai_style));
+    std::snprintf(status, sizeof(status), "ENEMY %s / %s", ai_style_name(state.match.ai_style),
+                  ai_difficulty_name(state.ai_difficulty));
     text(renderer, 515.0F, 22.0F, status, 1.0F);
     char commitment[32];
     std::snprintf(commitment, sizeof(commitment), "SEND %s", dispatch_name(state.dispatch_mode));
@@ -295,9 +302,10 @@ void draw_options(SDL_Renderer* renderer, const State& state) {
     (void)SDL_RenderClear(renderer);
     color(renderer, 232, 220, 190);
     centered_text(renderer, 170.0F, "OPTIONS", 3.0F);
-    draw_button(renderer, 310.0F,
-                state.rules.enemy_aggression < 0.55F ? "ENEMY: DELIBERATE" : "ENEMY: AGGRESSIVE",
-                state.options_choice == 0);
+    char difficulty[64];
+    std::snprintf(difficulty, sizeof(difficulty), "DIFFICULTY: %s",
+                  ai_difficulty_name(state.ai_difficulty));
+    draw_button(renderer, 310.0F, difficulty, state.options_choice == 0);
     draw_button(renderer, 375.0F, state.fullscreen ? "FULLSCREEN: ON" : "FULLSCREEN: OFF",
                 state.options_choice == 1);
     draw_button(renderer, 440.0F, "BACK", state.options_choice == 2);
