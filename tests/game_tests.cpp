@@ -228,10 +228,50 @@ int main() {
         return army.owner == enemy_owner;
     }));
 
+    // verify a stalled AI moves rear surplus into a friendly frontline base
+    start_level(state, 0);
+    int supply_source = -1;
+    int supply_stage = -1;
+    int defended_target = -1;
+    for (const NodeState& from : state.match.nodes) {
+        for (const NodeState& to : state.match.nodes) {
+            const std::vector<int> path = find_path(state.levels.front(), from.id, to.id);
+            if (path.size() >= 3) {
+                supply_source = path.front();
+                supply_stage = path[path.size() - 2];
+                defended_target = path.back();
+                break;
+            }
+        }
+        if (supply_source >= 0) break;
+    }
+    assert(supply_source >= 0 && supply_stage >= 0 && defended_target >= 0);
+    for (NodeState& node : state.match.nodes) {
+        node.owner = enemy_owner;
+        node.soldiers = 2.0F;
+        node.headquarters = false;
+    }
+    match_node(state, supply_source).soldiers = 50.0F;
+    match_node(state, defended_target).owner = player_owner;
+    match_node(state, defended_target).soldiers = 60.0F;
+    match_node(state, defended_target).headquarters = true;
+    state.match.ai_style = AiStyle::balanced;
+    state.mode = Mode::playing;
+    state.rules.generation_seconds = 10000.0F;
+    state.rules.enemy_think_seconds = 0.85F;
+    for (int frame = 0; frame < 60; ++frame) step(state);
+    const auto supply = std::ranges::find_if(state.match.armies, [supply_stage](const Army& army) {
+        return army.owner == enemy_owner && army.path.back() == supply_stage;
+    });
+    assert(supply != state.match.armies.end());
+    assert(std::ranges::all_of(supply->path, [&state](int node_id) {
+        return match_node(state, node_id).owner == enemy_owner;
+    }));
+
     const Vec2 aligned = node_world_position(state.levels.front(), state.levels.front().nodes[0].id);
     assert(std::fmod(aligned.x, 64.0F) == 32.0F);
     assert(std::fmod(aligned.y, 64.0F) == 32.0F);
 
-    std::cout << "loaded campaign; verified distributed GEN, rallies, routing, HQ, and AI styles\n";
+    std::cout << "loaded campaign; verified GEN, rallies, routing, HQ, and AI logistics\n";
     return 0;
 }

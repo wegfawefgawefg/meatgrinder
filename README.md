@@ -54,7 +54,9 @@ rally order forwards its stored commitment from that base on every GEN toward
 its target and remains visibly drawn until cleared. Friendly arrivals merge and
 hostile arrivals resolve against the local garrison. Assault orders capture
 intermediate positions; direct orders ignore them. Enemy personalities rotate
-between balanced, aggressive, turtle, and small-packet swarm strategies.
+between balanced, aggressive, turtle, and small-packet swarm strategies. When
+an attack is not viable, rear bases feed surplus troops through friendly routes
+to the frontline with the strongest current opportunity.
 
 See [docs/DESIGN.md](docs/DESIGN.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 and [docs/LEVELS.md](docs/LEVELS.md) for the current rules, ownership, and

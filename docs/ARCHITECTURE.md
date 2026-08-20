@@ -30,7 +30,8 @@ Files remain split by concrete domain:
 
 - `level.*`: JSON decoding and authored validation.
 - `camera.*`: tile-world framing, manual movement, zoom, and interpolation.
-- `game.*`: campaign/match creation, commands, AI, movement, combat, outcomes.
+- `ai.*`: enemy attack evaluation, frontline demand, and rear supply movement.
+- `game.*`: campaign/match creation, commands, movement, combat, and outcomes.
 - `input.*`: SDL event translation and pointer gestures.
 - `draw.*`: tiles, routes, nodes, troops, screens, and interpolation.
 - `debug.*`: optional ImGui inspection and rule tuning.

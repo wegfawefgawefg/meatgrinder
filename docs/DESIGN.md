@@ -40,8 +40,11 @@ Enemy controllers evaluate full routes, accumulated defense, distance, player
 ownership, and headquarters value. Campaign levels rotate four personalities:
 balanced waits for efficient attacks, aggressive accepts attrition to pressure
 HQ, turtle accumulates a large favorable attack, and swarm repeatedly sends
-small packets at nearby weak points. They share readable rules rather than
-hidden bonuses.
+small packets at nearby weak points. If none can justify an attack, a logistics
+pass identifies the most useful frontline staging base and transfers surplus
+from rear territory along an entirely friendly route. Troops already in transit
+count toward the staging requirement, preventing blind over-supply. The styles
+share readable rules rather than hidden bonuses.
 
 Troop commitment is selected with number keys: one soldier, half the garrison,
 or all but one. The same mode drives one-shot and rally orders, making probes,

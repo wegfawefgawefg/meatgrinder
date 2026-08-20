@@ -1,5 +1,6 @@
 #include "game.hpp"
 
+#include "ai.hpp"
 #include "camera.hpp"
 #include "level.hpp"
 
@@ -10,11 +11,6 @@
 namespace {
 
 NodeState* find_node(Match& match, int id) {
-    const auto found = std::ranges::find(match.nodes, id, &NodeState::id);
-    return found == match.nodes.end() ? nullptr : &*found;
-}
-
-const NodeState* find_node(const Match& match, int id) {
     const auto found = std::ranges::find(match.nodes, id, &NodeState::id);
     return found == match.nodes.end() ? nullptr : &*found;
 }
@@ -61,9 +57,8 @@ void ensure_headquarters(Match& match, int owner) {
     if (replacement != match.nodes.end()) replacement->headquarters = true;
 }
 
-bool launch_army(State& state, NodeState& source, int target_id, float soldiers, bool assault) {
-    const Level& level = state.levels[static_cast<std::size_t>(state.campaign_level)];
-    std::vector<int> path = path_between(level, source.id, target_id);
+bool launch_army_on_path(State& state, NodeState& source, std::vector<int> path, float soldiers,
+                         bool assault) {
     soldiers = std::min(std::floor(soldiers), std::floor(source.soldiers - 1.0F));
     if (path.size() < 2 || soldiers < 1.0F) return false;
     source.soldiers -= soldiers;
@@ -78,6 +73,12 @@ bool launch_army(State& state, NodeState& source, int target_id, float soldiers,
         state.match.stats.soldiers_sent += static_cast<int>(soldiers);
     }
     return true;
+}
+
+bool launch_army(State& state, NodeState& source, int target_id, float soldiers, bool assault) {
+    const Level& level = state.levels[static_cast<std::size_t>(state.campaign_level)];
+    return launch_army_on_path(state, source, path_between(level, source.id, target_id), soldiers,
+                               assault);
 }
 
 float dispatch_soldiers(const NodeState& source, DispatchMode mode) {
@@ -166,72 +167,6 @@ void step_generation(State& state) {
     if (state.match.generation_clock < state.rules.generation_seconds) return;
     state.match.generation_clock -= state.rules.generation_seconds;
     run_generation(state);
-}
-
-float route_defense(const Match& match, const std::vector<int>& path, int owner) {
-    float defense = 0.0F;
-    for (std::size_t index = 1; index < path.size(); ++index) {
-        const NodeState* node = find_node(match, path[index]);
-        if (node != nullptr && node->owner != owner) defense += node->soldiers + 1.0F;
-    }
-    return defense;
-}
-
-void step_enemy(State& state) {
-    state.match.ai_clock += step_seconds;
-    float interval = state.rules.enemy_think_seconds;
-    float fraction = state.rules.enemy_aggression;
-    float minimum = 7.0F;
-    if (state.match.ai_style == AiStyle::aggressive) {
-        interval *= 0.70F;
-        fraction = std::max(fraction, 0.68F);
-        minimum = 5.0F;
-    } else if (state.match.ai_style == AiStyle::turtle) {
-        interval *= 1.65F;
-        fraction = 0.78F;
-        minimum = 14.0F;
-    } else if (state.match.ai_style == AiStyle::swarm) {
-        interval *= 0.48F;
-        fraction = 0.34F;
-        minimum = 3.0F;
-    }
-    if (state.match.ai_clock < interval) return;
-    state.match.ai_clock = 0.0F;
-    const Level& level = state.levels[static_cast<std::size_t>(state.campaign_level)];
-    NodeState* best_source = nullptr;
-    int best_target = -1;
-    float best_score = -10000.0F;
-    for (NodeState& source : state.match.nodes) {
-        if (source.owner != enemy_owner || source.soldiers < minimum) continue;
-        for (const NodeState& candidate : state.match.nodes) {
-            const NodeState* target = &candidate;
-            if (target->owner == enemy_owner) continue;
-            const std::vector<int> path = path_between(level, source.id, target->id);
-            if (path.size() < 2) continue;
-            const float committed = std::floor(source.soldiers * fraction);
-            const float defense = route_defense(state.match, path, enemy_owner);
-            if (state.match.ai_style == AiStyle::turtle && committed < defense * 1.25F) continue;
-            if (state.match.ai_style == AiStyle::balanced && committed < defense * 0.45F) continue;
-            if (state.match.ai_style == AiStyle::aggressive && committed < defense * 0.25F) continue;
-            float score = committed - defense * 1.35F - static_cast<float>(path.size()) * 1.7F;
-            if (target->owner == player_owner) score += 11.0F;
-            if (target->headquarters) score += state.match.ai_style == AiStyle::aggressive ? 42.0F : 24.0F;
-            if (state.match.ai_style == AiStyle::swarm) {
-                score = 18.0F - target->soldiers * 2.0F - static_cast<float>(path.size());
-                if (target->owner == player_owner) score += 6.0F;
-            } else if (state.match.ai_style == AiStyle::turtle) {
-                score += source.soldiers * 0.6F - defense;
-            }
-            if (score > best_score) {
-                best_score = score;
-                best_source = &source;
-                best_target = target->id;
-            }
-        }
-    }
-    if (best_source != nullptr) {
-        (void)send_army(state, best_source->id, best_target, fraction, true);
-    }
 }
 
 bool side_alive(const Match& match, int owner) {
@@ -399,6 +334,14 @@ bool send_army(State& state, int source_id, int target_id, DispatchMode mode, bo
     NodeState* source = find_node(state.match, source_id);
     if (source == nullptr || source->owner == neutral_owner || source->soldiers < 2.0F) return false;
     return launch_army(state, *source, target_id, dispatch_soldiers(*source, mode), assault);
+}
+
+bool send_army_path(State& state, int source_id, std::vector<int> path, float soldiers,
+                    bool assault) {
+    NodeState* source = find_node(state.match, source_id);
+    if (source == nullptr || source->owner == neutral_owner || path.empty() ||
+        path.front() != source_id) return false;
+    return launch_army_on_path(state, *source, std::move(path), soldiers, assault);
 }
 
 std::vector<int> find_path(const Level& level, int source_id, int target_id) {

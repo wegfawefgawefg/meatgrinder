@@ -8,6 +8,8 @@ void restart_level(State& state);
 bool send_army(State& state, int source_id, int target_id, float fraction = 0.5F);
 bool send_army(State& state, int source_id, int target_id, float fraction, bool assault);
 bool send_army(State& state, int source_id, int target_id, DispatchMode mode, bool assault = true);
+bool send_army_path(State& state, int source_id, std::vector<int> path, float soldiers,
+                    bool assault = true);
 std::vector<int> find_path(const Level& level, int source_id, int target_id);
 bool relocate_headquarters(State& state, int node_id);
 bool set_rally_order(State& state, int source_id, int target_id, bool assault = true,
