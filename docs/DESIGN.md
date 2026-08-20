@@ -14,6 +14,8 @@ front, eases into place at setup, emphasizes victory, and otherwise moves only
 under player pan and zoom. Middle-drag and Space-left-drag grab the map directly;
 keyboard panning remains available. Captures never steal camera control.
 Nodes, roads, troops, and background tiles all share the same coordinate system.
+The top force meter compares every blue and red soldier in garrisons and in
+transit, so issuing an order does not change either side's displayed total.
 
 The player can select one node, box-select several, Shift-box to add more, or
 Shift-click to toggle one member of the selection, then issue a destination

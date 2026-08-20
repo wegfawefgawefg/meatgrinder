@@ -113,6 +113,45 @@ void owner_color(SDL_Renderer* renderer, int owner, bool muted = false) {
     else color(renderer, muted ? 103 : 151, muted ? 100 : 145, muted ? 90 : 126);
 }
 
+float army_population(const Match& match, int owner) {
+    float population = 0.0F;
+    for (const NodeState& node : match.nodes) {
+        if (node.owner == owner) population += node.soldiers;
+    }
+    for (const Army& army : match.armies) {
+        if (army.owner == owner) population += army.soldiers;
+    }
+    return population;
+}
+
+void draw_population_bar(SDL_Renderer* renderer, const Match& match) {
+    constexpr float x = 300.0F;
+    constexpr float y = 48.0F;
+    constexpr float width = 680.0F;
+    constexpr float height = 9.0F;
+    const float blue = army_population(match, player_owner);
+    const float red = army_population(match, enemy_owner);
+    const float total = blue + red;
+    const float blue_fraction = total > 0.0F ? blue / total : 0.5F;
+    const float split = std::round(width * blue_fraction);
+
+    owner_color(renderer, player_owner);
+    fill(renderer, x, y, split, height);
+    owner_color(renderer, enemy_owner);
+    fill(renderer, x + split, y, width - split, height);
+    color(renderer, 231, 224, 196);
+    outline(renderer, x, y, width, height);
+
+    char count[32];
+    std::snprintf(count, sizeof(count), "%d", static_cast<int>(std::lround(blue)));
+    const float blue_width = static_cast<float>(std::string_view(count).size()) * 8.0F;
+    owner_color(renderer, player_owner);
+    text(renderer, x - blue_width - 12.0F, y, count, 1.0F);
+    std::snprintf(count, sizeof(count), "%d", static_cast<int>(std::lround(red)));
+    owner_color(renderer, enemy_owner);
+    text(renderer, x + width + 12.0F, y, count, 1.0F);
+}
+
 void draw_tiles(SDL_Renderer* renderer, const Level& level, Vec2 center, float zoom) {
     constexpr float tile_size = 64.0F;
     const int source_height = static_cast<int>(level.tiles.size());
@@ -364,6 +403,7 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
     char generation[64];
     std::snprintf(generation, sizeof(generation), "NEXT GEN %.1fs", generation_left);
     text(renderer, 1055.0F, 22.0F, generation, 1.0F);
+    draw_population_bar(renderer, state.match);
     const char* help = !state.rally_sources.empty()
                                  ? "RALLY TARGET: LEFT-CLICK NODE  |  CTRL=DIRECT  |  ESC LEAVES CLEARED"
                            : state.clearing_orders
