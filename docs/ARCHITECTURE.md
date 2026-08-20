@@ -23,10 +23,11 @@ world geometry is rasterized at two or three internal pixels before scaling, so
 routes and selection boxes survive non-native window sizes.
 
 Modes are explicit: main menu, options, world select/unlock/transition, level
-select/transition/card, playing, pause, defeat, score, and campaign complete.
-Selection changes use a two-sided horizontal wipe which swaps scenes at full
-cover, and all UI motion evaluates at render-interpolated time. ImGui is a
-developer overlay only.
+select/card, playing, pause, defeat, score, and campaign complete.
+Entering a world uses a two-sided horizontal wipe which swaps scenes at full
+cover, holds the title briefly, then reveals its level map. Entering a level
+uses the dedicated banner. All UI motion evaluates at render-interpolated time.
+ImGui is a developer overlay only.
 
 Files remain split by concrete domain:
 

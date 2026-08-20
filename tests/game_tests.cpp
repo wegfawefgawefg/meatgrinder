@@ -74,14 +74,12 @@ int main() {
     state.results.assign(state.levels.size(), {});
     state.selected_world = 0;
     change_mode(state, Mode::world_transition);
-    for (int frame = 0; frame < 43; ++frame) step(state);
+    for (int frame = 0; frame < 90 && state.mode == Mode::world_transition; ++frame) step(state);
     assert(state.mode == Mode::level_select);
     state.selected_level = 0;
     start_level(state, state.selected_level);
-    change_mode(state, Mode::level_transition);
     assert(!state.match.nodes.empty());
-    for (int frame = 0; frame < 43; ++frame) step(state);
-    assert(state.mode == Mode::playing);
+    assert(state.mode == Mode::level_card);
 
     start_level(state, 0);
     assert(state.mode == Mode::level_card);

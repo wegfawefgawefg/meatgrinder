@@ -151,7 +151,7 @@ bool step_campaign_navigation(State& state) {
         return true;
     }
     if (state.mode == Mode::world_transition) {
-        if (state.mode_seconds < 0.7F) return true;
+        if (state.mode_seconds < campaign_transition_seconds) return true;
         change_mode(state, Mode::level_select);
         return true;
     }
@@ -169,14 +169,8 @@ bool step_campaign_navigation(State& state) {
         if (state.input.back_pressed) {
             change_mode(state, Mode::world_select);
         } else if (activate && level_available(state, state.selected_level)) {
-            const int selected = state.selected_level;
-            start_level(state, selected);
-            change_mode(state, Mode::level_transition);
+            start_level(state, state.selected_level);
         }
-        return true;
-    }
-    if (state.mode == Mode::level_transition) {
-        if (state.mode_seconds >= 0.7F) change_mode(state, Mode::playing);
         return true;
     }
     return false;

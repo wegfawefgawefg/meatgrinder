@@ -68,8 +68,8 @@ that arrives creates one HQ soldier.
 The original campaign contains six worlds of five levels. Each world introduces
 one mechanic in isolation before combining it with earlier systems. Level 3 is
 an optional branch and Level 5 opens the next world. Completed levels retain a
-best score and time in the platform save directory. World and level selections
-use horizontal swipe transitions when entering their next layer.
+best score and time in the platform save directory. World selection uses a
+horizontal wipe; level selection opens a dedicated banner before battle.
 
 A rally order forwards its stored commitment from an occupied node on every GEN and
 remains visibly drawn until cleared. Friendly arrivals merge and hostile

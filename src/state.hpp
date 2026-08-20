@@ -34,7 +34,6 @@ enum class Mode {
     world_unlock,
     world_transition,
     level_select,
-    level_transition,
     level_card,
     playing,
     paused,

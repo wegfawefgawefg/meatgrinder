@@ -147,39 +147,38 @@ void level_select(SDL_Renderer* renderer, const State& state) {
     text(renderer, 24.0F, 690.0F, "ESC WORLDS", 1.0F);
 }
 
-float transition_progress(const State& state, float alpha) {
-    const float render_seconds = state.mode_seconds + alpha * step_seconds;
-    return std::clamp(render_seconds / 0.7F, 0.0F, 1.0F);
+float transition_seconds(const State& state, float alpha) {
+    return std::clamp(state.mode_seconds + alpha * step_seconds,
+                      0.0F, campaign_transition_seconds);
 }
 
 } // namespace
 
 bool campaign_transition_revealing(const State& state, float alpha) {
-    return transition_progress(state, alpha) >= 0.5F;
+    return transition_seconds(state, alpha) >= campaign_transition_enter_seconds;
 }
 
 void draw_campaign_transition(SDL_Renderer* renderer, const State& state, float alpha) {
-    const float progress = transition_progress(state, alpha);
-    const float phase = progress < 0.5F ? smooth(progress * 2.0F)
-                                        : smooth((progress - 0.5F) * 2.0F);
-    const float left = progress < 0.5F
-        ? std::lerp(static_cast<float>(layout_width), 0.0F, phase)
-        : std::lerp(0.0F, -static_cast<float>(layout_width), phase);
+    const float seconds = transition_seconds(state, alpha);
+    float left = 0.0F;
+    if (seconds < campaign_transition_enter_seconds) {
+        const float phase = smooth(seconds / campaign_transition_enter_seconds);
+        left = std::lerp(static_cast<float>(layout_width), 0.0F, phase);
+    } else if (seconds >= campaign_transition_enter_seconds + campaign_transition_hold_seconds) {
+        const float exit_seconds = seconds - campaign_transition_enter_seconds -
+            campaign_transition_hold_seconds;
+        const float phase = smooth(exit_seconds / campaign_transition_exit_seconds);
+        left = std::lerp(0.0F, -static_cast<float>(layout_width), phase);
+    }
     color(renderer, 174, 53, 47);
     fill(renderer, left, 0.0F, static_cast<float>(layout_width),
          static_cast<float>(layout_height));
     color(renderer, 255, 236, 210);
     std::string title;
     std::string subtitle;
-    if (state.mode == Mode::world_transition) {
-        const World& world = state.worlds[static_cast<std::size_t>(state.selected_world)];
-        title = world.name;
-        subtitle = world.theme;
-    } else {
-        const Level& level = state.levels[static_cast<std::size_t>(state.selected_level)];
-        title = level.id + "  " + level.name;
-        subtitle = level.briefing;
-    }
+    const World& world = state.worlds[static_cast<std::size_t>(state.selected_world)];
+    title = world.name;
+    subtitle = world.theme;
     const float title_width = static_cast<float>(title.size()) * 8.0F * 3.0F;
     text(renderer, left + (static_cast<float>(layout_width) - title_width) * 0.5F, 315.0F,
          title, 3.0F);

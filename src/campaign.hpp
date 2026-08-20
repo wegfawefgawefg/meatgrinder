@@ -2,6 +2,12 @@
 
 #include "state.hpp"
 
+inline constexpr float campaign_transition_enter_seconds = 0.25F;
+inline constexpr float campaign_transition_hold_seconds = 0.70F;
+inline constexpr float campaign_transition_exit_seconds = 0.30F;
+inline constexpr float campaign_transition_seconds = campaign_transition_enter_seconds +
+    campaign_transition_hold_seconds + campaign_transition_exit_seconds;
+
 int level_index(const State& state, std::string_view id);
 bool level_available(const State& state, int index);
 bool world_available(const State& state, int index);

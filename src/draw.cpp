@@ -477,11 +477,6 @@ void draw(SDL_Renderer* renderer, const State& state, float alpha) {
         draw_campaign_screen(renderer, state, alpha);
         draw_campaign_transition(renderer, state, alpha);
     }
-    else if (state.mode == Mode::level_transition) {
-        if (campaign_transition_revealing(state, alpha)) draw_playing(renderer, state, alpha);
-        else draw_campaign_screen(renderer, state, alpha);
-        draw_campaign_transition(renderer, state, alpha);
-    }
     else if (state.mode == Mode::level_card) draw_level_card(renderer, state, alpha);
     else if (state.mode == Mode::playing) draw_playing(renderer, state, alpha);
     else draw_overlay_screen(renderer, state);
