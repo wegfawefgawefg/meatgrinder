@@ -125,18 +125,18 @@ bool step_campaign_navigation(State& state) {
         if (state.input.back_pressed) {
             change_mode(state, Mode::main_menu);
         } else if (activate && world_available(state, state.selected_world)) {
-            change_mode(state, Mode::world_zoom);
+            change_mode(state, Mode::world_transition);
         }
         return true;
     }
     if (state.mode == Mode::world_unlock) {
         if (state.mode_seconds >= 1.4F || state.input.confirm_pressed ||
             state.input.pointer_released) {
-            change_mode(state, Mode::world_zoom);
+            change_mode(state, Mode::world_transition);
         }
         return true;
     }
-    if (state.mode == Mode::world_zoom) {
+    if (state.mode == Mode::world_transition) {
         if (state.mode_seconds < 0.7F) return true;
         const World& world = state.worlds[static_cast<std::size_t>(state.selected_world)];
         state.selected_level = world.levels.front();
@@ -164,11 +164,11 @@ bool step_campaign_navigation(State& state) {
         if (state.input.back_pressed) {
             change_mode(state, Mode::world_select);
         } else if (activate && level_available(state, state.selected_level)) {
-            change_mode(state, Mode::level_zoom);
+            change_mode(state, Mode::level_transition);
         }
         return true;
     }
-    if (state.mode == Mode::level_zoom) {
+    if (state.mode == Mode::level_transition) {
         if (state.mode_seconds >= 0.7F) start_level(state, state.selected_level);
         return true;
     }

@@ -22,10 +22,10 @@ sampling. Mouse coordinates apply the inverse presentation transform. Thin
 world geometry is rasterized at two or three internal pixels before scaling, so
 routes and selection boxes survive non-native window sizes.
 
-Modes are explicit: main menu, options, world select/unlock/zoom, level
-select/zoom/card, playing, pause, defeat, score, and campaign complete. Zoom
-screens transform the same authored map positions before entering the next
-layer. ImGui is a developer overlay only.
+Modes are explicit: main menu, options, world select/unlock/transition, level
+select/transition/card, playing, pause, defeat, score, and campaign complete.
+Selection changes use a covering horizontal swipe, and all UI motion evaluates
+at render-interpolated time. ImGui is a developer overlay only.
 
 Files remain split by concrete domain:
 
@@ -38,6 +38,6 @@ Files remain split by concrete domain:
 - `game.*`: campaign/match creation, commands, movement, combat, and outcomes.
 - `input.*`: SDL event translation and pointer gestures.
 - `draw.*`: battles, specialist silhouettes, troops, and interpolation.
-- `draw_campaign.*`: world/level maps and zoom transitions.
+- `draw_campaign.*`: world/level maps and covering swipe transitions.
 - `debug.*`: optional ImGui inspection and rule tuning.
 - `main.cpp`: SDL ownership and the fixed-step loop.

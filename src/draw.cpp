@@ -400,10 +400,10 @@ void draw_options(SDL_Renderer* renderer, const State& state) {
     draw_button(renderer, 440.0F, "BACK", state.options_choice == 2);
 }
 
-void draw_level_card(SDL_Renderer* renderer, const State& state) {
+void draw_level_card(SDL_Renderer* renderer, const State& state, float alpha) {
     color(renderer, 28, 29, 27);
     (void)SDL_RenderClear(renderer);
-    const float t = state.mode_seconds;
+    const float t = state.mode_seconds + alpha * step_seconds;
     float x = 0.0F;
     if (t < 0.35F) x = std::lerp(static_cast<float>(layout_width), 0.0F, t / 0.35F);
     else if (t > 1.25F) x = std::lerp(0.0F, -static_cast<float>(layout_width), (t - 1.25F) / 0.35F);
@@ -465,11 +465,11 @@ void draw(SDL_Renderer* renderer, const State& state, float alpha) {
     if (state.mode == Mode::main_menu) draw_main_menu(renderer, state);
     else if (state.mode == Mode::options) draw_options(renderer, state);
     else if (state.mode == Mode::world_select || state.mode == Mode::world_unlock ||
-             state.mode == Mode::world_zoom ||
-             state.mode == Mode::level_select || state.mode == Mode::level_zoom) {
-        draw_campaign_screen(renderer, state);
+             state.mode == Mode::world_transition ||
+             state.mode == Mode::level_select || state.mode == Mode::level_transition) {
+        draw_campaign_screen(renderer, state, alpha);
     }
-    else if (state.mode == Mode::level_card) draw_level_card(renderer, state);
+    else if (state.mode == Mode::level_card) draw_level_card(renderer, state, alpha);
     else if (state.mode == Mode::playing) draw_playing(renderer, state, alpha);
     else draw_overlay_screen(renderer, state);
 }

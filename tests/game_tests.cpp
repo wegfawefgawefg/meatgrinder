@@ -73,11 +73,11 @@ int main() {
     assert(std::filesystem::remove(progress_path));
     state.results.assign(state.levels.size(), {});
     state.selected_world = 0;
-    change_mode(state, Mode::world_zoom);
+    change_mode(state, Mode::world_transition);
     for (int frame = 0; frame < 43; ++frame) step(state);
     assert(state.mode == Mode::level_select);
     state.selected_level = 0;
-    change_mode(state, Mode::level_zoom);
+    change_mode(state, Mode::level_transition);
     for (int frame = 0; frame < 43; ++frame) step(state);
     assert(state.mode == Mode::level_card);
 

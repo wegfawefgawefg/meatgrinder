@@ -40,15 +40,6 @@ float smooth(float value) {
     return value * value * (3.0F - 2.0F * value);
 }
 
-Vec2 zoomed(Vec2 point, Vec2 focus, float amount, float maximum) {
-    const Vec2 center{static_cast<float>(layout_width) * 0.5F,
-                      static_cast<float>(layout_height) * 0.5F};
-    const float transition = (amount - 1.0F) / std::max(0.1F, maximum - 1.0F);
-    const Vec2 anchor{std::lerp(focus.x, center.x, transition),
-                      std::lerp(focus.y, center.y, transition)};
-    return {(point.x - focus.x) * amount + anchor.x, (point.y - focus.y) * amount + anchor.y};
-}
-
 void line(SDL_Renderer* renderer, Vec2 a, Vec2 b, float width = 2.0F) {
     for (int offset = 0; offset < static_cast<int>(width); ++offset) {
         const float shift = static_cast<float>(offset) - width * 0.5F;
@@ -56,21 +47,18 @@ void line(SDL_Renderer* renderer, Vec2 a, Vec2 b, float width = 2.0F) {
     }
 }
 
-void world_select(SDL_Renderer* renderer, const State& state, bool transitioning) {
+void world_select(SDL_Renderer* renderer, const State& state) {
     color(renderer, 27, 31, 30);
     (void)SDL_RenderClear(renderer);
-    const Vec2 focus = world_map_position(state.worlds[static_cast<std::size_t>(state.selected_world)]);
-    const float t = transitioning ? smooth(state.mode_seconds / 0.7F) : 0.0F;
-    const float zoom = std::lerp(1.0F, 4.0F, t);
     color(renderer, 76, 83, 72);
     for (std::size_t index = 1; index < state.worlds.size(); ++index) {
-        const Vec2 a = zoomed(world_map_position(state.worlds[index - 1]), focus, zoom, 4.0F);
-        const Vec2 b = zoomed(world_map_position(state.worlds[index]), focus, zoom, 4.0F);
+        const Vec2 a = world_map_position(state.worlds[index - 1]);
+        const Vec2 b = world_map_position(state.worlds[index]);
         line(renderer, a, b, 3.0F);
     }
     for (int index = 0; index < static_cast<int>(state.worlds.size()); ++index) {
         const World& world = state.worlds[static_cast<std::size_t>(index)];
-        const Vec2 point = zoomed(world_map_position(world), focus, zoom, 4.0F);
+        const Vec2 point = world_map_position(world);
         const bool unlocked = world_available(state, index);
         const bool complete = world_completed(state, index);
         const bool selected = index == state.selected_world;
@@ -85,12 +73,9 @@ void world_select(SDL_Renderer* renderer, const State& state, bool transitioning
         char number[16];
         std::snprintf(number, sizeof(number), "%d", index + 1);
         text(renderer, point.x - 8.0F, point.y - 12.0F, number, 2.0F);
-        if (!transitioning) {
-            const float label_width = static_cast<float>(world.name.size()) * 8.0F;
-            text(renderer, point.x - label_width * 0.5F, point.y + 42.0F, world.name, 1.0F);
-        }
+        const float label_width = static_cast<float>(world.name.size()) * 8.0F;
+        text(renderer, point.x - label_width * 0.5F, point.y + 42.0F, world.name, 1.0F);
     }
-    if (transitioning) return;
     color(renderer, 235, 226, 200);
     centered_text(renderer, 28.0F, "SELECT WORLD", 2.5F);
     const World& selected = state.worlds[static_cast<std::size_t>(state.selected_world)];
@@ -103,37 +88,32 @@ void world_select(SDL_Renderer* renderer, const State& state, bool transitioning
     text(renderer, 24.0F, 690.0F, "ESC BACK", 1.0F);
 }
 
-void level_links(SDL_Renderer* renderer, const State& state, const World& world, Vec2 focus,
-                 float zoom) {
+void level_links(SDL_Renderer* renderer, const State& state, const World& world) {
     color(renderer, 92, 91, 76);
     for (int index : world.levels) {
         const Level& level = state.levels[static_cast<std::size_t>(index)];
-        const Vec2 to = zoomed(level_map_position(level), focus, zoom, 5.0F);
+        const Vec2 to = level_map_position(level);
         for (const std::string& requirement : level.prerequisites) {
             const int required = level_index(state, requirement);
             if (required < 0 || state.levels[static_cast<std::size_t>(required)].world != level.world) continue;
-            const Vec2 from = zoomed(level_map_position(state.levels[static_cast<std::size_t>(required)]),
-                                     focus, zoom, 5.0F);
+            const Vec2 from = level_map_position(state.levels[static_cast<std::size_t>(required)]);
             line(renderer, from, to, 3.0F);
         }
     }
 }
 
-void level_select(SDL_Renderer* renderer, const State& state, bool transitioning) {
+void level_select(SDL_Renderer* renderer, const State& state) {
     color(renderer, 31, 34, 30);
     (void)SDL_RenderClear(renderer);
     const World& world = state.worlds[static_cast<std::size_t>(state.selected_world)];
     const Level& selected_level = state.levels[static_cast<std::size_t>(state.selected_level)];
-    const Vec2 focus = level_map_position(selected_level);
-    const float t = transitioning ? smooth(state.mode_seconds / 0.7F) : 0.0F;
-    const float zoom = std::lerp(1.0F, 5.0F, t);
-    level_links(renderer, state, world, focus, zoom);
+    level_links(renderer, state, world);
     for (int index : world.levels) {
         const Level& level = state.levels[static_cast<std::size_t>(index)];
         const LevelResult& result = state.results[static_cast<std::size_t>(index)];
         const bool available = level_available(state, index);
         const bool selected = index == state.selected_level;
-        const Vec2 point = zoomed(level_map_position(level), focus, zoom, 5.0F);
+        const Vec2 point = level_map_position(level);
         if (result.completed) color(renderer, 55, 157, 89);
         else if (!available) color(renderer, 66, 68, 65);
         else if (selected) color(renderer, 224, 190, 72);
@@ -144,12 +124,9 @@ void level_select(SDL_Renderer* renderer, const State& state, bool transitioning
         outline(renderer, point.x - size * 0.5F, point.y - size * 0.5F, size, size);
         text(renderer, point.x - 12.0F, point.y - 5.0F, level.id, 1.0F);
         if (result.completed) text(renderer, point.x + 13.0F, point.y - 25.0F, "CHECK", 0.75F);
-        if (!transitioning) {
-            const float label_width = static_cast<float>(level.name.size()) * 8.0F;
-            text(renderer, point.x - label_width * 0.5F, point.y + 33.0F, level.name, 1.0F);
-        }
+        const float label_width = static_cast<float>(level.name.size()) * 8.0F;
+        text(renderer, point.x - label_width * 0.5F, point.y + 33.0F, level.name, 1.0F);
     }
-    if (transitioning) return;
     color(renderer, 235, 226, 200);
     centered_text(renderer, 28.0F, world.name, 2.5F);
     color(renderer, 22, 24, 23, 242);
@@ -170,12 +147,39 @@ void level_select(SDL_Renderer* renderer, const State& state, bool transitioning
     text(renderer, 24.0F, 690.0F, "ESC WORLDS", 1.0F);
 }
 
+void draw_swipe(SDL_Renderer* renderer, const State& state, float alpha) {
+    const float render_seconds = state.mode_seconds + alpha * step_seconds;
+    const float progress = smooth(render_seconds / 0.58F);
+    const float left = std::lerp(static_cast<float>(layout_width), 0.0F, progress);
+    color(renderer, 174, 53, 47);
+    fill(renderer, left, 0.0F, static_cast<float>(layout_width),
+         static_cast<float>(layout_height));
+    color(renderer, 255, 236, 210);
+    std::string title;
+    std::string subtitle;
+    if (state.mode == Mode::world_transition) {
+        const World& world = state.worlds[static_cast<std::size_t>(state.selected_world)];
+        title = world.name;
+        subtitle = world.theme;
+    } else {
+        const Level& level = state.levels[static_cast<std::size_t>(state.selected_level)];
+        title = level.id + "  " + level.name;
+        subtitle = level.briefing;
+    }
+    const float title_width = static_cast<float>(title.size()) * 8.0F * 3.0F;
+    text(renderer, left + (static_cast<float>(layout_width) - title_width) * 0.5F, 315.0F,
+         title, 3.0F);
+    const float subtitle_width = static_cast<float>(subtitle.size()) * 8.0F;
+    text(renderer, left + (static_cast<float>(layout_width) - subtitle_width) * 0.5F, 385.0F,
+         subtitle, 1.0F);
+}
+
 } // namespace
 
-void draw_campaign_screen(SDL_Renderer* renderer, const State& state) {
-    if (state.mode == Mode::world_select || state.mode == Mode::world_zoom ||
+void draw_campaign_screen(SDL_Renderer* renderer, const State& state, float alpha) {
+    if (state.mode == Mode::world_select || state.mode == Mode::world_transition ||
         state.mode == Mode::world_unlock) {
-        world_select(renderer, state, state.mode == Mode::world_zoom);
+        world_select(renderer, state);
         if (state.mode == Mode::world_unlock) {
             color(renderer, 20, 22, 21, 245);
             fill(renderer, 310.0F, 265.0F, 660.0F, 170.0F);
@@ -186,6 +190,9 @@ void draw_campaign_screen(SDL_Renderer* renderer, const State& state) {
             centered_text(renderer, 407.0F, "PRESS TO ENTER", 1.0F);
         }
     } else {
-        level_select(renderer, state, state.mode == Mode::level_zoom);
+        level_select(renderer, state);
+    }
+    if (state.mode == Mode::world_transition || state.mode == Mode::level_transition) {
+        draw_swipe(renderer, state, alpha);
     }
 }

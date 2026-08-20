@@ -4,4 +4,4 @@
 
 struct SDL_Renderer;
 
-void draw_campaign_screen(SDL_Renderer* renderer, const State& state);
+void draw_campaign_screen(SDL_Renderer* renderer, const State& state, float alpha);
