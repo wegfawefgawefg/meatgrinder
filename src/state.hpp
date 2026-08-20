@@ -125,7 +125,6 @@ struct MatchStats {
     int soldiers_lost{};
     int nodes_captured{};
     int generations{};
-    int headquarters_moves{};
 };
 
 struct AiMind {
@@ -143,6 +142,7 @@ struct Match {
     float ai_clock{};
     float generation_clock{};
     float outcome_clock{};
+    int defeated_owner{neutral_owner};
     AiStyle ai_style{AiStyle::balanced};
     AiMind ai;
 };
@@ -164,7 +164,6 @@ struct InputState {
     int camera_drag_button{};
     bool direct_down{};
     bool additive_down{};
-    bool relocate_hq_pressed{};
     bool rally_orders_pressed{};
     bool clear_orders_pressed{};
     bool pan_up{};
@@ -179,7 +178,7 @@ struct InputState {
 };
 
 struct Rules {
-    float army_speed{40.0F};
+    float army_speed{20.0F};
     float generation_seconds{4.0F};
     float enemy_think_seconds{0.85F};
     float enemy_aggression{0.48F};
@@ -202,7 +201,6 @@ struct State {
     float mode_seconds{};
     bool fullscreen{};
     bool debug_open{};
-    bool relocating_headquarters{};
     bool clearing_orders{};
     std::vector<int> rally_sources;
     DispatchMode dispatch_mode{DispatchMode::half};

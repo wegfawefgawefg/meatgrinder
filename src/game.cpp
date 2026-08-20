@@ -107,6 +107,7 @@ void resolve_arrival(State& state, Army& army, int target_id, bool final) {
         if (army.owner == player_owner) ++state.match.stats.nodes_captured;
         if (old_owner == player_owner) state.match.stats.soldiers_lost += static_cast<int>(target->soldiers);
         const float survivors = army.soldiers - defense;
+        if (target->headquarters && old_owner >= 0) state.match.defeated_owner = old_owner;
         target->headquarters = false;
         target->rally_target = -1;
         target->owner = army.owner;
@@ -117,7 +118,6 @@ void resolve_arrival(State& state, Army& army, int target_id, bool final) {
             target->soldiers = 1.0F;
             army.soldiers = std::max(0.0F, survivors - 1.0F);
         }
-        if (old_owner >= 0) ensure_headquarters(state.match, old_owner);
     } else {
         target->soldiers = std::max(0.0F, target->soldiers - army.soldiers);
         if (army.owner == player_owner) state.match.stats.soldiers_lost += static_cast<int>(army.soldiers);
@@ -138,6 +138,7 @@ void step_armies(State& state) {
         if (army.progress < 1.0F) continue;
         const bool final = army.leg + 2 >= static_cast<int>(army.path.size());
         if (army.assault || final) resolve_arrival(state, army, to_id, final);
+        if (state.match.defeated_owner != neutral_owner) break;
         if (army.soldiers <= 0.0F) continue;
         if (!final) {
             ++army.leg;
@@ -145,6 +146,7 @@ void step_armies(State& state) {
             army.progress = 0.0F;
         } else {
             resolve_arrival(state, army, to_id, true);
+            if (state.match.defeated_owner != neutral_owner) break;
         }
     }
     std::erase_if(state.match.armies, [](const Army& army) { return army.soldiers <= 0.0F; });
@@ -175,6 +177,18 @@ bool side_alive(const Match& match, int owner) {
 }
 
 void step_outcome(State& state) {
+    if (state.match.defeated_owner == player_owner) {
+        change_mode(state, Mode::defeat);
+        return;
+    }
+    if (state.match.defeated_owner == enemy_owner) {
+        const int time_bonus =
+            std::max(0, 3000 - static_cast<int>(state.match.stats.elapsed_seconds * 10.0F));
+        state.campaign_score += 1000 + time_bonus + state.match.stats.nodes_captured * 100;
+        ++state.completed_levels;
+        change_mode(state, Mode::score);
+        return;
+    }
     const bool player_alive = side_alive(state.match, player_owner);
     const bool enemy_alive = side_alive(state.match, enemy_owner);
     if (player_alive && enemy_alive) {
@@ -310,7 +324,6 @@ void start_level(State& state, int level_index) {
         });
     }
     for (int owner : {player_owner, enemy_owner}) ensure_headquarters(state.match, owner);
-    state.relocating_headquarters = false;
     state.clearing_orders = false;
     state.rally_sources.clear();
     setup_camera(state, level);
@@ -350,16 +363,6 @@ std::vector<int> find_path(const Level& level, int source_id, int target_id) {
     return path_between(level, source_id, target_id);
 }
 
-bool relocate_headquarters(State& state, int node_id) {
-    NodeState* node = find_node(state.match, node_id);
-    NodeState* old = headquarters_for(state.match, player_owner);
-    if (node == nullptr || old == nullptr || node->owner != player_owner || node == old) return false;
-    node->headquarters = true;
-    old->headquarters = false;
-    ++state.match.stats.headquarters_moves;
-    return true;
-}
-
 bool set_rally_order(State& state, int source_id, int target_id, bool assault, DispatchMode mode) {
     NodeState* source = find_node(state.match, source_id);
     if (source == nullptr || source->owner != player_owner || target_id < 0 ||
@@ -380,7 +383,6 @@ bool begin_selected_rally_orders(State& state) {
         state.rally_sources.push_back(node.id);
     }
     if (state.rally_sources.empty()) return false;
-    state.relocating_headquarters = false;
     state.clearing_orders = false;
     return true;
 }
@@ -440,12 +442,6 @@ void handle_pointer_release(State& state) {
                                   state.input.pointer.y - state.input.press_origin.y);
     const int clicked = node_at_pointer(state, state.input.pointer);
     NodeState* target = find_node(state.match, clicked);
-    if (state.relocating_headquarters) {
-        if (clicked >= 0 && relocate_headquarters(state, clicked)) {
-            state.relocating_headquarters = false;
-        }
-        return;
-    }
     if (!state.rally_sources.empty()) {
         if (clicked < 0) return;
         for (int source_id : state.rally_sources) {
@@ -505,17 +501,10 @@ void step(State& state) {
                                        DispatchMode::all_but_one};
         state.dispatch_mode = modes[state.input.dispatch_choice];
     }
-    if (state.input.relocate_hq_pressed && state.mode == Mode::playing) {
-        state.relocating_headquarters = !state.relocating_headquarters;
-        state.clearing_orders = false;
-        state.rally_sources.clear();
-        clear_selection(state);
-    }
     if (state.input.rally_orders_pressed && state.mode == Mode::playing) {
         (void)begin_selected_rally_orders(state);
     }
     if (state.input.clear_orders_pressed && state.mode == Mode::playing) {
-        state.relocating_headquarters = false;
         state.rally_sources.clear();
         state.clearing_orders = !clear_selected_rallies(state) && !state.clearing_orders;
     }
@@ -525,8 +514,7 @@ void step(State& state) {
         return;
     }
     if (state.input.back_pressed) {
-        if (state.relocating_headquarters || state.clearing_orders || !state.rally_sources.empty()) {
-            state.relocating_headquarters = false;
+        if (state.clearing_orders || !state.rally_sources.empty()) {
             state.clearing_orders = false;
             state.rally_sources.clear();
             return;
@@ -537,6 +525,10 @@ void step(State& state) {
     state.match.stats.elapsed_seconds += step_seconds;
     step_generation(state);
     step_armies(state);
+    if (state.match.defeated_owner != neutral_owner) {
+        step_outcome(state);
+        return;
+    }
     step_enemy(state);
     step_outcome(state);
 }

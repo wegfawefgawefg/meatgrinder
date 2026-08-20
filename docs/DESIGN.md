@@ -33,11 +33,12 @@ rally to many sources. Each GEN forwards the rally's stored one, half, or
 all-but-one commitment along its
 persistent route. Source markers and colored paths remain visible until C clears
 selected orders, or C enters click-to-clear mode with no selection. Headquarters
-remains a relocatable strategic identity but is not the only production faucet.
+is fixed at match start, and its capture immediately defeats its owner.
 
 There is intentionally no global combat bonus based on castle count. Territory
-already increases headquarters recruitment, so a leading side does not also
-make every individual soldier stronger.
+already increases total recruitment by adding local generators, so a leading
+side does not also make every individual soldier stronger. Army packets travel
+at a deliberate 20 world pixels per second.
 
 Enemy controllers evaluate full routes, accumulated defense, distance, player
 ownership, and headquarters value. Campaign levels rotate four personalities:

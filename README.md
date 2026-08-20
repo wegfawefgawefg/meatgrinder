@@ -38,7 +38,6 @@ Controls:
 - Hold Control on the target click to make that rally direct instead of assault.
 - Pressing R immediately clears the selected sources' previous rallies; Escape leaves them cleared.
 - Press C to clear all selected rallies, or press C with no selection and click one base to clear it.
-- Press H, then click an owned node, to relocate your headquarters.
 - Number keys select a commitment: 1 sends one, 2 sends half, and 3 sends all but one.
 - The active commitment applies to immediate orders and is stored in newly assigned rallies.
 - Middle-drag or Space-left-drag pans the map; WASD and arrow keys also pan.
@@ -52,6 +51,10 @@ The simulation advances at a fixed 60 Hz. The game rasterizes into a 1280x720
 internal framebuffer and nearest-neighbor presents it into the external window.
 Rendering interpolates moving troops and the player-controlled camera without
 putting frame-rate-dependent behavior into the rules.
+
+Each side begins with one fixed headquarters. Capturing the opposing HQ ends
+the match immediately; ordinary total elimination remains a fallback victory
+condition. Army packets travel at 20 world pixels per second.
 
 ## Current first-pass rules
 

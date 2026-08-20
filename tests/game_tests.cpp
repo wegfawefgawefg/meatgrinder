@@ -41,6 +41,7 @@ void step_until_armies_stop(State& state) {
 
 int main() {
     State state;
+    assert(state.rules.army_speed == 20.0F);
     std::string error;
     assert(load_campaign(std::string(MG_ASSET_ROOT) + "/levels/campaign.json", state.levels, error));
     assert(state.levels.size() == 10);
@@ -225,16 +226,49 @@ int main() {
     assert(match_node(state, assault_path[1]).owner == enemy_owner);
     assert(match_node(state, assault_path.back()).owner == player_owner);
 
-    // verify HQ relocation keeps exactly one player headquarters
+    // verify a headquarters is fixed and its capture ends the match immediately
     restart_level(state);
-    int replacement = -1;
+    int player_hq = -1;
+    int enemy_hq = -1;
+    int player_attack_source = -1;
+    int enemy_attack_source = -1;
     for (const NodeState& node : state.match.nodes) {
-        if (node.owner == player_owner && !node.headquarters) replacement = node.id;
+        if (node.owner == player_owner) {
+            if (node.headquarters) player_hq = node.id;
+            else player_attack_source = node.id;
+        }
+        if (node.owner == enemy_owner) {
+            if (node.headquarters) enemy_hq = node.id;
+            else enemy_attack_source = node.id;
+        }
     }
-    assert(replacement >= 0 && relocate_headquarters(state, replacement));
+    assert(player_hq >= 0 && enemy_hq >= 0);
+    assert(player_attack_source >= 0 && enemy_attack_source >= 0);
+    match_node(state, player_attack_source).soldiers = 10.0F;
+    match_node(state, enemy_hq).soldiers = 1.0F;
+    state.mode = Mode::playing;
+    state.rules.army_speed = 100000.0F;
+    state.rules.enemy_think_seconds = 10000.0F;
+    state.rules.generation_seconds = 10000.0F;
+    assert(send_army_path(state, player_attack_source, {player_attack_source, enemy_hq}, 9.0F));
+    step(state);
+    assert(state.match.defeated_owner == enemy_owner);
+    assert(state.mode == Mode::score);
     assert(headquarters_count(state, player_owner) == 1);
-    assert(match_node(state, replacement).headquarters);
+    assert(headquarters_count(state, enemy_owner) == 0);
 
+    restart_level(state);
+    match_node(state, enemy_attack_source).soldiers = 10.0F;
+    match_node(state, player_hq).soldiers = 1.0F;
+    state.mode = Mode::playing;
+    assert(send_army_path(state, enemy_attack_source, {enemy_attack_source, player_hq}, 9.0F));
+    step(state);
+    assert(state.match.defeated_owner == player_owner);
+    assert(state.mode == Mode::defeat);
+    assert(headquarters_count(state, player_owner) == 0);
+    assert(headquarters_count(state, enemy_owner) == 1);
+
+    restart_level(state);
     state.mode = Mode::playing;
     state.input.dispatch_choice = 2;
     step(state);

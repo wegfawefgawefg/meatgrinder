@@ -267,16 +267,13 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
     char generation[64];
     std::snprintf(generation, sizeof(generation), "NEXT GEN %.1fs", generation_left);
     text(renderer, 1055.0F, 22.0F, generation, 1.0F);
-    const char* help = state.relocating_headquarters
-                           ? "RELOCATE HQ: CLICK OWNED BASE  |  ESC CANCELS"
-                           : !state.rally_sources.empty()
+    const char* help = !state.rally_sources.empty()
                                  ? "RALLY TARGET: LEFT-CLICK NODE  |  CTRL=DIRECT  |  ESC LEAVES CLEARED"
                            : state.clearing_orders
                                  ? "CLEAR RALLY: CLICK OWNED BASE  |  ESC CANCELS"
-                                 : "CLICK ASSAULT | SHIFT ADD/TOGGLE | CTRL DIRECT | R RALLY | 1 ONE 2 HALF 3 ALL | C CLEAR | H HQ";
+                                 : "CLICK ASSAULT | SHIFT ADD/TOGGLE | CTRL DIRECT | R RALLY | 1 ONE 2 HALF 3 ALL | C CLEAR";
     text(renderer, 24.0F, 690.0F, help, 1.0F);
-    if (state.input.pointer_down && state.rally_sources.empty() && !state.clearing_orders &&
-        !state.relocating_headquarters) {
+    if (state.input.pointer_down && state.rally_sources.empty() && !state.clearing_orders) {
         color(renderer, 255, 228, 113);
         const Vec2 a = state.input.press_origin;
         const Vec2 b = state.input.pointer;

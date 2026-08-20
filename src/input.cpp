@@ -41,7 +41,6 @@ void pump_input(InputState& input, SDL_Renderer* renderer) {
             if (event.key.key == SDLK_DOWN || event.key.key == SDLK_S) input.down_pressed = true;
             if (event.key.key == SDLK_LEFT || event.key.key == SDLK_A) input.left_pressed = true;
             if (event.key.key == SDLK_RIGHT || event.key.key == SDLK_D) input.right_pressed = true;
-            if (event.key.key == SDLK_H) input.relocate_hq_pressed = true;
             if (event.key.key == SDLK_R) input.rally_orders_pressed = true;
             if (event.key.key == SDLK_C) input.clear_orders_pressed = true;
             if (event.key.key == SDLK_1) input.dispatch_choice = 0;
@@ -102,7 +101,6 @@ void consume_input(InputState& input) {
     input.right_pressed = false;
     input.pointer_pressed = false;
     input.pointer_released = false;
-    input.relocate_hq_pressed = false;
     input.rally_orders_pressed = false;
     input.clear_orders_pressed = false;
     input.dispatch_choice = -1;
