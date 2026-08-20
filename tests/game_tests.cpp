@@ -6,6 +6,7 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <utility>
 
 namespace {
 
@@ -88,7 +89,7 @@ int main() {
     }
     assert(state.match.stats.generations == 1);
 
-    // verify any base can forward its next generated batch as a direct rally
+    // verify any base can forward its chosen commitment as a direct rally
     restart_level(state);
     int rally_source = -1;
     int rally_target = -1;
@@ -97,14 +98,50 @@ int main() {
         else if (node.owner == player_owner && node.id != rally_source) rally_target = node.id;
     }
     assert(rally_source >= 0 && rally_target >= 0);
-    assert(set_rally_order(state, rally_source, rally_target, false));
+    match_node(state, rally_source).soldiers = 5.0F;
+    assert(set_rally_order(state, rally_source, rally_target, false, DispatchMode::half));
     assert(!match_node(state, rally_source).rally_assault);
+    assert(match_node(state, rally_source).rally_dispatch == DispatchMode::half);
     state.mode = Mode::playing;
     state.rules.enemy_think_seconds = 10000.0F;
     state.rules.generation_seconds = 0.1F;
     for (int frame = 0; frame < 7; ++frame) step(state);
     assert(!state.match.armies.empty());
     assert(!state.match.armies.front().assault);
+    assert(state.match.armies.front().soldiers == 3.0F);
+
+    // verify one, half, and all-but-one are exact and usable by regular orders
+    for (const auto& [mode, sent] : {std::pair{DispatchMode::one, 1.0F},
+                                     std::pair{DispatchMode::half, 5.0F},
+                                     std::pair{DispatchMode::all_but_one, 9.0F}}) {
+        restart_level(state);
+        match_node(state, source).soldiers = 10.0F;
+        assert(send_army(state, source, target, mode));
+        assert(state.match.armies.back().soldiers == sent);
+        assert(match_node(state, source).soldiers == 10.0F - sent);
+    }
+
+    // verify a selected group becomes rally sources and old orders clear on entry
+    restart_level(state);
+    std::vector<int> group;
+    for (NodeState& node : state.match.nodes) {
+        if (node.owner != player_owner || group.size() == 2) continue;
+        node.selected = true;
+        node.rally_target = target;
+        group.push_back(node.id);
+    }
+    assert(group.size() == 2);
+    assert(begin_rally_orders(state, group.front()));
+    assert(state.rally_sources == group);
+    assert(match_node(state, group[0]).rally_target == -1);
+    assert(match_node(state, group[1]).rally_target == -1);
+    state.mode = Mode::playing;
+    state.input.back_pressed = true;
+    step(state);
+    state.input.back_pressed = false;
+    assert(state.rally_sources.empty());
+    assert(state.mode == Mode::playing);
+    assert(clear_selected_rallies(state));
 
     // verify an assault captures an intermediate stop while a direct order bypasses it
     restart_level(state);
@@ -159,7 +196,7 @@ int main() {
     state.mode = Mode::playing;
     state.input.dispatch_choice = 2;
     step(state);
-    assert(state.dispatch_fraction == 0.75F);
+    assert(state.dispatch_mode == DispatchMode::all_but_one);
 
     start_level(state, 3);
     assert(state.match.ai_style == AiStyle::swarm);

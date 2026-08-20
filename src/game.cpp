@@ -80,6 +80,12 @@ bool launch_army(State& state, NodeState& source, int target_id, float soldiers,
     return true;
 }
 
+float dispatch_soldiers(const NodeState& source, DispatchMode mode) {
+    if (mode == DispatchMode::one) return 1.0F;
+    if (mode == DispatchMode::half) return std::floor(source.soldiers * 0.5F);
+    return std::floor(source.soldiers - 1.0F);
+}
+
 void resolve_arrival(State& state, Army& army, int target_id, bool final) {
     NodeState* target = find_node(state.match, target_id);
     if (target == nullptr) {
@@ -148,7 +154,8 @@ void run_generation(State& state) {
         if (node.owner == neutral_owner) continue;
         node.soldiers += 1.0F;
         if (node.rally_target >= 0 && node.rally_target != node.id) {
-            (void)launch_army(state, node, node.rally_target, 1.0F, node.rally_assault);
+            (void)launch_army(state, node, node.rally_target,
+                              dispatch_soldiers(node, node.rally_dispatch), node.rally_assault);
         }
     }
     ++state.match.stats.generations;
@@ -367,7 +374,8 @@ void start_level(State& state, int level_index) {
     }
     for (int owner : {player_owner, enemy_owner}) ensure_headquarters(state.match, owner);
     state.relocating_headquarters = false;
-    state.rally_source = -1;
+    state.clearing_orders = false;
+    state.rally_sources.clear();
     setup_camera(state, level);
     change_mode(state, Mode::level_card);
 }
@@ -387,6 +395,12 @@ bool send_army(State& state, int source_id, int target_id, float fraction, bool 
     return launch_army(state, *source, target_id, soldiers, assault);
 }
 
+bool send_army(State& state, int source_id, int target_id, DispatchMode mode, bool assault) {
+    NodeState* source = find_node(state.match, source_id);
+    if (source == nullptr || source->owner == neutral_owner || source->soldiers < 2.0F) return false;
+    return launch_army(state, *source, target_id, dispatch_soldiers(*source, mode), assault);
+}
+
 std::vector<int> find_path(const Level& level, int source_id, int target_id) {
     return path_between(level, source_id, target_id);
 }
@@ -401,7 +415,7 @@ bool relocate_headquarters(State& state, int node_id) {
     return true;
 }
 
-bool set_rally_order(State& state, int source_id, int target_id, bool assault) {
+bool set_rally_order(State& state, int source_id, int target_id, bool assault, DispatchMode mode) {
     NodeState* source = find_node(state.match, source_id);
     if (source == nullptr || source->owner != player_owner || target_id < 0 ||
         source_id == target_id) return false;
@@ -409,7 +423,39 @@ bool set_rally_order(State& state, int source_id, int target_id, bool assault) {
     if (find_path(level, source_id, target_id).size() < 2) return false;
     source->rally_target = target_id;
     source->rally_assault = assault;
+    source->rally_dispatch = mode;
     return true;
+}
+
+bool begin_rally_orders(State& state, int source_id) {
+    NodeState* clicked = find_node(state.match, source_id);
+    if (clicked == nullptr || clicked->owner != player_owner) return false;
+    state.rally_sources.clear();
+    if (clicked->selected) {
+        for (NodeState& node : state.match.nodes) {
+            if (!node.selected || node.owner != player_owner) continue;
+            node.rally_target = -1;
+            state.rally_sources.push_back(node.id);
+        }
+    } else {
+        clear_selection(state);
+        clicked->selected = true;
+        clicked->rally_target = -1;
+        state.rally_sources.push_back(clicked->id);
+    }
+    state.relocating_headquarters = false;
+    state.clearing_orders = false;
+    return true;
+}
+
+bool clear_selected_rallies(State& state) {
+    bool cleared = false;
+    for (NodeState& node : state.match.nodes) {
+        if (!node.selected || node.owner != player_owner) continue;
+        node.rally_target = -1;
+        cleared = true;
+    }
+    return cleared;
 }
 
 void clear_selection(State& state) {
@@ -466,14 +512,20 @@ void handle_pointer_release(State& state) {
         if (relocate_headquarters(state, clicked)) state.relocating_headquarters = false;
         return;
     }
-    if (state.rally_source >= 0) {
-        NodeState* source = find_node(state.match, state.rally_source);
-        if (source != nullptr && clicked == source->id) {
-            source->rally_target = -1;
-        } else {
-            (void)set_rally_order(state, state.rally_source, clicked, !state.input.direct_down);
+    if (!state.rally_sources.empty()) {
+        for (int source_id : state.rally_sources) {
+            if (clicked == source_id) continue;
+            (void)set_rally_order(state, source_id, clicked, !state.input.direct_down,
+                                  state.dispatch_mode);
         }
-        state.rally_source = -1;
+        state.rally_sources.clear();
+        return;
+    }
+    if (state.clearing_orders) {
+        if (target != nullptr && target->owner == player_owner) {
+            target->rally_target = -1;
+            state.clearing_orders = false;
+        }
         return;
     }
     const bool has_selection = std::ranges::any_of(state.match.nodes, &NodeState::selected);
@@ -487,8 +539,7 @@ void handle_pointer_release(State& state) {
             if (node.selected && node.id != clicked) sources.push_back(node.id);
         }
         for (int source : sources) {
-            (void)send_army(state, source, clicked, state.dispatch_fraction,
-                            !state.input.direct_down);
+            (void)send_army(state, source, clicked, state.dispatch_mode, !state.input.direct_down);
         }
         clear_selection(state);
         return;
@@ -498,23 +549,33 @@ void handle_pointer_release(State& state) {
 
 void handle_secondary_release(State& state) {
     if (state.mode != Mode::playing) return;
-    NodeState* source = find_node(state.match, node_at_pointer(state, state.input.pointer));
-    state.relocating_headquarters = false;
-    clear_selection(state);
-    state.rally_source = source != nullptr && source->owner == player_owner ? source->id : -1;
+    const int source_id = node_at_pointer(state, state.input.pointer);
+    if (!begin_rally_orders(state, source_id)) {
+        state.relocating_headquarters = false;
+        state.clearing_orders = false;
+        state.rally_sources.clear();
+        clear_selection(state);
+    }
 }
 
 void step(State& state) {
     state.mode_seconds += step_seconds;
     if (state.mode == Mode::playing) step_camera(state);
     if (state.input.dispatch_choice >= 0) {
-        constexpr float fractions[]{0.25F, 0.5F, 0.75F, 0.9F};
-        state.dispatch_fraction = fractions[state.input.dispatch_choice];
+        constexpr DispatchMode modes[]{DispatchMode::one, DispatchMode::half,
+                                       DispatchMode::all_but_one};
+        state.dispatch_mode = modes[state.input.dispatch_choice];
     }
     if (state.input.relocate_hq_pressed && state.mode == Mode::playing) {
         state.relocating_headquarters = !state.relocating_headquarters;
-        state.rally_source = -1;
+        state.clearing_orders = false;
+        state.rally_sources.clear();
         clear_selection(state);
+    }
+    if (state.input.clear_orders_pressed && state.mode == Mode::playing) {
+        state.relocating_headquarters = false;
+        state.rally_sources.clear();
+        state.clearing_orders = !clear_selected_rallies(state) && !state.clearing_orders;
     }
     if (state.input.pointer_released) handle_pointer_release(state);
     if (state.input.secondary_released) handle_secondary_release(state);
@@ -523,9 +584,10 @@ void step(State& state) {
         return;
     }
     if (state.input.back_pressed) {
-        if (state.relocating_headquarters || state.rally_source >= 0) {
+        if (state.relocating_headquarters || state.clearing_orders || !state.rally_sources.empty()) {
             state.relocating_headquarters = false;
-            state.rally_source = -1;
+            state.clearing_orders = false;
+            state.rally_sources.clear();
             return;
         }
         change_mode(state, Mode::paused);

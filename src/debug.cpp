@@ -35,7 +35,10 @@ void draw_debug(State& state, SDL_Renderer* renderer) {
             ImGui::Text("Camera: %.0f, %.0f @ %.2f", state.camera.center.x,
                         state.camera.center.y, state.camera.zoom);
             ImGui::Text("AI style: %d", static_cast<int>(state.match.ai_style));
-            ImGui::Text("Dispatch: %.0f%%", state.dispatch_fraction * 100.0F);
+            const char* dispatch = state.dispatch_mode == DispatchMode::one ? "one"
+                                   : state.dispatch_mode == DispatchMode::half ? "half"
+                                                                              : "all but one";
+            ImGui::Text("Dispatch: %s", dispatch);
             if (ImGui::Button("Restart level")) restart_level(state);
             ImGui::SameLine();
             if (ImGui::Button("Win now")) {

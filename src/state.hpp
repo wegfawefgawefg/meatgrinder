@@ -55,6 +55,12 @@ enum class AiStyle {
     swarm,
 };
 
+enum class DispatchMode {
+    one,
+    half,
+    all_but_one,
+};
+
 struct LevelNode {
     int id{};
     int x{};
@@ -86,6 +92,7 @@ struct NodeState {
     bool headquarters{};
     int rally_target{-1};
     bool rally_assault{true};
+    DispatchMode rally_dispatch{DispatchMode::half};
 };
 
 struct Army {
@@ -134,6 +141,7 @@ struct InputState {
     bool secondary_released{};
     bool direct_down{};
     bool relocate_hq_pressed{};
+    bool clear_orders_pressed{};
     bool pan_up{};
     bool pan_down{};
     bool pan_left{};
@@ -168,6 +176,7 @@ struct State {
     bool fullscreen{};
     bool debug_open{};
     bool relocating_headquarters{};
-    int rally_source{-1};
-    float dispatch_fraction{0.5F};
+    bool clearing_orders{};
+    std::vector<int> rally_sources;
+    DispatchMode dispatch_mode{DispatchMode::half};
 };

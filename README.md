@@ -32,10 +32,13 @@ Controls:
 - Click another node to assault along the route, capturing every hostile stop.
 - Control-click the target to rush directly past intermediate positions.
 - Right-click any owned base, then left-click a target, to establish a rally.
+- Box-select several bases and right-click one of them to assign the same rally to all of them.
 - Hold Control on the target click to make that rally direct instead of assault.
-- Select the rally source itself as the target to clear its existing rally.
+- Entering rally setup immediately clears the source's previous rally; Escape leaves it cleared.
+- Press C to clear all selected rallies, or press C with no selection and click one base to clear it.
 - Press H, then click an owned node, to relocate your headquarters.
-- Number keys 1–4 select 25%, 50%, 75%, or 90% troop commitment.
+- Number keys select a commitment: 1 sends one, 2 sends half, and 3 sends all but one.
+- The active commitment applies to immediate orders and is stored in newly assigned rallies.
 - WASD or arrow keys pan; the mouse wheel zooms. Escape pauses or backs out.
 - F1 opens developer tools; F11 toggles fullscreen.
 
@@ -47,8 +50,8 @@ putting frame-rate-dependent behavior into the rules.
 ## Current first-pass rules
 
 Every owned base receives one soldier on the discrete GEN shown in the HUD. A
-rally order forwards each newly generated soldier from that base toward its
-target and remains visibly drawn until cleared. Friendly arrivals merge and
+rally order forwards its stored commitment from that base on every GEN toward
+its target and remains visibly drawn until cleared. Friendly arrivals merge and
 hostile arrivals resolve against the local garrison. Assault orders capture
 intermediate positions; direct orders ignore them. Enemy personalities rotate
 between balanced, aggressive, turtle, and small-packet swarm strategies.

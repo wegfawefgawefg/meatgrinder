@@ -23,10 +23,12 @@ target. Packets do not collide on roads.
 Every occupied base generates one local soldier on a four-second GEN. The HUD
 shows the countdown. Right-clicking any owned base enters rally creation; the
 next left-click sets an assault rally, or a direct rally while Control is held.
-Each GEN immediately forwards that base's new soldier along its persistent
-route. Source markers and colored paths remain visible until the order is
-cleared. Headquarters remains a relocatable strategic identity but is not the
-only production faucet.
+Entering rally creation clears the old order, so Escape intentionally leaves the
+base unordered. A box selection can assign the same rally to many sources. Each
+GEN forwards the rally's stored one, half, or all-but-one commitment along its
+persistent route. Source markers and colored paths remain visible until C clears
+selected orders, or C enters click-to-clear mode with no selection. Headquarters
+remains a relocatable strategic identity but is not the only production faucet.
 
 There is intentionally no global combat bonus based on castle count. Territory
 already increases headquarters recruitment, so a leading side does not also
@@ -39,9 +41,9 @@ HQ, turtle accumulates a large favorable attack, and swarm repeatedly sends
 small packets at nearby weak points. They share readable rules rather than
 hidden bonuses.
 
-One-shot troop commitment is selected with number keys: 25%, 50%, 75%, or 90%.
-This makes reinforcing, probing, and decisive pushes distinct decisions instead
-of forcing half the garrison into every order.
+Troop commitment is selected with number keys: one soldier, half the garrison,
+or all but one. The same mode drives one-shot and rally orders, making probes,
+steady forwarding, and decisive pushes explicit.
 
 Powerups, special scripted reinforcements, HRR dialogue, and HRR menu flow are
 outside this foundation. The debug panel can tune the handful of prototype

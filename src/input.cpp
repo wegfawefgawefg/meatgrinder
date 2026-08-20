@@ -41,10 +41,10 @@ void pump_input(InputState& input, SDL_Renderer* renderer) {
             if (event.key.key == SDLK_LEFT || event.key.key == SDLK_A) input.left_pressed = true;
             if (event.key.key == SDLK_RIGHT || event.key.key == SDLK_D) input.right_pressed = true;
             if (event.key.key == SDLK_H) input.relocate_hq_pressed = true;
+            if (event.key.key == SDLK_C) input.clear_orders_pressed = true;
             if (event.key.key == SDLK_1) input.dispatch_choice = 0;
             if (event.key.key == SDLK_2) input.dispatch_choice = 1;
             if (event.key.key == SDLK_3) input.dispatch_choice = 2;
-            if (event.key.key == SDLK_4) input.dispatch_choice = 3;
         }
         if (event.type == SDL_EVENT_MOUSE_MOTION) {
             input.pointer = logical_pointer(renderer, event.motion.x, event.motion.y);
@@ -91,6 +91,7 @@ void consume_input(InputState& input) {
     input.pointer_released = false;
     input.secondary_released = false;
     input.relocate_hq_pressed = false;
+    input.clear_orders_pressed = false;
     input.dispatch_choice = -1;
     input.zoom_delta = 0.0F;
 }

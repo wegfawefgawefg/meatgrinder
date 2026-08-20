@@ -88,6 +88,18 @@ const char* ai_style_name(AiStyle style) {
     return "BALANCED";
 }
 
+const char* dispatch_name(DispatchMode mode) {
+    if (mode == DispatchMode::one) return "1";
+    if (mode == DispatchMode::half) return "HALF";
+    return "ALL";
+}
+
+const char* rally_mark(const NodeState& node) {
+    if (node.rally_dispatch == DispatchMode::one) return node.rally_assault ? "1A" : "1D";
+    if (node.rally_dispatch == DispatchMode::half) return node.rally_assault ? "HA" : "HD";
+    return node.rally_assault ? "AA" : "AD";
+}
+
 void owner_color(SDL_Renderer* renderer, int owner, bool muted = false) {
     if (owner == player_owner) color(renderer, muted ? 51 : 65, muted ? 113 : 176, muted ? 130 : 205);
     else if (owner == enemy_owner) color(renderer, muted ? 135 : 212, muted ? 57 : 69, muted ? 54 : 55);
@@ -139,7 +151,7 @@ void draw_rallies(SDL_Renderer* renderer, const Level& level, const Match& match
             fill(renderer, mid.x - 3.0F, mid.y - 3.0F, 6.0F, 6.0F);
         }
         const Vec2 source = world_to_screen(node_world_position(level, node.id), center, zoom);
-        text(renderer, source.x - 4.0F, source.y + 24.0F, node.rally_assault ? "R" : "D", 1.0F);
+        text(renderer, source.x - 8.0F, source.y + 24.0F, rally_mark(node), 1.0F);
     }
 }
 
@@ -209,8 +221,7 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
     std::snprintf(status, sizeof(status), "ENEMY %s", ai_style_name(state.match.ai_style));
     text(renderer, 515.0F, 22.0F, status, 1.0F);
     char commitment[32];
-    std::snprintf(commitment, sizeof(commitment), "SEND %d%%",
-                  static_cast<int>(state.dispatch_fraction * 100.0F));
+    std::snprintf(commitment, sizeof(commitment), "SEND %s", dispatch_name(state.dispatch_mode));
     text(renderer, 740.0F, 22.0F, commitment, 1.0F);
     const float generation_left = std::max(0.0F, state.rules.generation_seconds -
                                                     state.match.generation_clock);
@@ -225,9 +236,11 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
     text(renderer, 1055.0F, 22.0F, generation, 1.0F);
     const char* help = state.relocating_headquarters
                            ? "RELOCATE HQ: CLICK OWNED BASE  |  ESC CANCELS"
-                           : state.rally_source >= 0
-                                 ? "RALLY: CLICK TARGET  |  CTRL=DIRECT  |  CLICK SOURCE=CLEAR  |  ESC CANCELS"
-                                 : "CLICK: ASSAULT  |  CTRL: DIRECT  |  RIGHT-CLICK: RALLY  |  1-4: SEND SIZE  |  H: HQ";
+                           : !state.rally_sources.empty()
+                                 ? "RALLY SOURCES: CLICK TARGET  |  CTRL=DIRECT  |  ESC LEAVES CLEARED"
+                           : state.clearing_orders
+                                 ? "CLEAR RALLY: CLICK OWNED BASE  |  ESC CANCELS"
+                                 : "CLICK ASSAULT | CTRL DIRECT | RIGHT-CLICK RALLY | 1 ONE  2 HALF  3 ALL | C CLEAR | H HQ";
     text(renderer, 24.0F, 690.0F, help, 1.0F);
     if (state.input.pointer_down) {
         color(renderer, 255, 228, 113);
