@@ -20,30 +20,38 @@ found locally when available and fetched otherwise.
 ./scripts/test.sh
 ```
 
+The default desktop window is a centered, resizable 1280x720 utility window,
+which makes tiling window managers such as i3 float it. `--width` and `--height`
+can override only the external window; the internal framebuffer remains
+1280x720.
+
 Controls:
 
 - Click a friendly stronghold to select it.
 - Drag a box around several friendly strongholds to select them.
 - Click another node to assault along the route, capturing every hostile stop.
 - Control-click the target to rush directly past intermediate positions.
-- Right-drag from your HQ to establish a persistent reinforcement rally route.
-- Right-click the HQ to cancel its rally route.
+- Right-click any owned base, then left-click a target, to establish a rally.
+- Hold Control on the target click to make that rally direct instead of assault.
+- Select the rally source itself as the target to clear its existing rally.
 - Press H, then click an owned node, to relocate your headquarters.
+- Number keys 1–4 select 25%, 50%, 75%, or 90% troop commitment.
 - WASD or arrow keys pan; the mouse wheel zooms. Escape pauses or backs out.
 - F1 opens developer tools; F11 toggles fullscreen.
 
-The simulation advances at a fixed 60 Hz. Rendering interpolates moving troops
-between completed simulation states, so presentation remains smooth without
+The simulation advances at a fixed 60 Hz. The game rasterizes into a 1280x720
+internal framebuffer and nearest-neighbor presents it into the external window.
+Rendering interpolates moving troops and the player-controlled camera without
 putting frame-rate-dependent behavior into the rules.
 
 ## Current first-pass rules
 
-Each side has one headquarters. Every owned node contributes to the discrete
-GEN payout shown in the HUD, but recruits appear only at headquarters. A rally
-order immediately forwards each new batch toward its target. Friendly arrivals
-merge and hostile arrivals resolve against the local garrison. Assault orders
-capture intermediate positions; direct orders ignore them. Opposing packets
-still pass on roads. The deliberately plain rules live in `src/game.cpp`.
+Every owned base receives one soldier on the discrete GEN shown in the HUD. A
+rally order forwards each newly generated soldier from that base toward its
+target and remains visibly drawn until cleared. Friendly arrivals merge and
+hostile arrivals resolve against the local garrison. Assault orders capture
+intermediate positions; direct orders ignore them. Enemy personalities rotate
+between balanced, aggressive, turtle, and small-packet swarm strategies.
 
 See [docs/DESIGN.md](docs/DESIGN.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 and [docs/LEVELS.md](docs/LEVELS.md) for the current rules, ownership, and

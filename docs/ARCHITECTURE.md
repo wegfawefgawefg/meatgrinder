@@ -15,6 +15,12 @@ retain previous and current states, and only drawing interpolates between them.
 Simulation decisions therefore remain deterministic for a given command
 sequence.
 
+Drawing always targets a 1280x720 RGBA framebuffer. The host then copies that
+texture to the largest aspect-correct external rectangle using nearest-neighbor
+sampling. Mouse coordinates apply the inverse presentation transform. Thin
+world geometry is rasterized at two or three internal pixels before scaling, so
+routes and selection boxes survive non-native window sizes.
+
 Modes are explicit: main menu, options, level card, playing, pause, result,
 score, and campaign complete. Transitions are direct assignments with a reset
 mode clock. ImGui is a developer overlay only; shipping screens are drawn by the

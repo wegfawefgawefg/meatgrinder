@@ -48,6 +48,13 @@ enum class NodeKind {
     mine,
 };
 
+enum class AiStyle {
+    balanced,
+    aggressive,
+    turtle,
+    swarm,
+};
+
 struct LevelNode {
     int id{};
     int x{};
@@ -78,6 +85,7 @@ struct NodeState {
     bool selected{};
     bool headquarters{};
     int rally_target{-1};
+    bool rally_assault{true};
 };
 
 struct Army {
@@ -107,6 +115,7 @@ struct Match {
     float ai_clock{};
     float generation_clock{};
     float outcome_clock{};
+    AiStyle ai_style{AiStyle::balanced};
 };
 
 struct InputState {
@@ -123,7 +132,6 @@ struct InputState {
     bool pointer_released{};
     bool pointer_down{};
     bool secondary_released{};
-    bool secondary_down{};
     bool direct_down{};
     bool relocate_hq_pressed{};
     bool pan_up{};
@@ -133,14 +141,13 @@ struct InputState {
     float zoom_delta{};
     Vec2 pointer{};
     Vec2 press_origin{};
-    Vec2 secondary_origin{};
+    int dispatch_choice{-1};
 };
 
 struct Rules {
     float army_speed{40.0F};
-    float generation_seconds{10.0F};
-    float generation_scale{1.0F};
-    float enemy_think_seconds{1.15F};
+    float generation_seconds{4.0F};
+    float enemy_think_seconds{0.85F};
     float enemy_aggression{0.48F};
 };
 
@@ -161,4 +168,6 @@ struct State {
     bool fullscreen{};
     bool debug_open{};
     bool relocating_headquarters{};
+    int rally_source{-1};
+    float dispatch_fraction{0.5F};
 };

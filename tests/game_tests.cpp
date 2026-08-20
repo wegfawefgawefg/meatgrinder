@@ -1,6 +1,7 @@
 #include "game.hpp"
 #include "level.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -72,7 +73,7 @@ int main() {
 
     step_until_armies_stop(state);
 
-    // verify GEN recruits appear only at headquarters
+    // verify every owned base receives the same fixed GEN recruit
     restart_level(state);
     state.mode = Mode::playing;
     state.rules.enemy_think_seconds = 10000.0F;
@@ -82,27 +83,28 @@ int main() {
     for (int frame = 0; frame < 7; ++frame) step(state);
     for (std::size_t index = 0; index < state.match.nodes.size(); ++index) {
         const NodeState& node = state.match.nodes[index];
-        if (node.owner >= 0 && node.headquarters) assert(node.soldiers > before[index]);
+        if (node.owner >= 0) assert(node.soldiers == before[index] + 1.0F);
         else assert(node.soldiers == before[index]);
     }
     assert(state.match.stats.generations == 1);
 
-    // verify HQ rally orders forward the next generated batch
+    // verify any base can forward its next generated batch as a direct rally
     restart_level(state);
     int rally_source = -1;
     int rally_target = -1;
     for (const NodeState& node : state.match.nodes) {
-        if (node.owner == player_owner && node.headquarters) rally_source = node.id;
-        if (node.owner == player_owner && !node.headquarters) rally_target = node.id;
+        if (node.owner == player_owner && !node.headquarters && rally_source < 0) rally_source = node.id;
+        else if (node.owner == player_owner && node.id != rally_source) rally_target = node.id;
     }
     assert(rally_source >= 0 && rally_target >= 0);
-    assert(set_rally_order(state, rally_source, rally_target));
+    assert(set_rally_order(state, rally_source, rally_target, false));
+    assert(!match_node(state, rally_source).rally_assault);
     state.mode = Mode::playing;
     state.rules.enemy_think_seconds = 10000.0F;
     state.rules.generation_seconds = 0.1F;
     for (int frame = 0; frame < 7; ++frame) step(state);
     assert(!state.match.armies.empty());
-    assert(state.match.armies.front().assault);
+    assert(!state.match.armies.front().assault);
 
     // verify an assault captures an intermediate stop while a direct order bypasses it
     restart_level(state);
@@ -126,9 +128,12 @@ int main() {
     match_node(state, assault_path[1]).soldiers = 1.0F;
     match_node(state, assault_path.back()).owner = enemy_owner;
     match_node(state, assault_path.back()).soldiers = 1.0F;
+    const Vec2 camera_target = state.camera.target_center;
     assert(send_army(state, assault_source, assault_path.back(), 0.75F, true));
     step_until_armies_stop(state);
     assert(match_node(state, assault_path[1]).owner == player_owner);
+    assert(state.camera.target_center.x == camera_target.x);
+    assert(state.camera.target_center.y == camera_target.y);
 
     restart_level(state);
     match_node(state, assault_source).soldiers = 40.0F;
@@ -151,10 +156,26 @@ int main() {
     assert(headquarters_count(state, player_owner) == 1);
     assert(match_node(state, replacement).headquarters);
 
+    state.mode = Mode::playing;
+    state.input.dispatch_choice = 2;
+    step(state);
+    assert(state.dispatch_fraction == 0.75F);
+
+    start_level(state, 3);
+    assert(state.match.ai_style == AiStyle::swarm);
+    state.mode = Mode::playing;
+    state.rules.army_speed = 40.0F;
+    state.rules.generation_seconds = 10000.0F;
+    state.rules.enemy_think_seconds = 0.85F;
+    for (int frame = 0; frame < 120; ++frame) step(state);
+    assert(std::ranges::any_of(state.match.armies, [](const Army& army) {
+        return army.owner == enemy_owner;
+    }));
+
     const Vec2 aligned = node_world_position(state.levels.front(), state.levels.front().nodes[0].id);
     assert(std::fmod(aligned.x, 64.0F) == 32.0F);
     assert(std::fmod(aligned.y, 64.0F) == 32.0F);
 
-    std::cout << "loaded campaign; verified GEN, assault, direct routing, and HQ relocation\n";
+    std::cout << "loaded campaign; verified distributed GEN, rallies, routing, HQ, and AI styles\n";
     return 0;
 }

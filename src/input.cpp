@@ -4,11 +4,20 @@
 #include <backends/imgui_impl_sdl3.h>
 #include <imgui.h>
 
+#include <algorithm>
+
 namespace {
 
 Vec2 logical_pointer(SDL_Renderer* renderer, float x, float y) {
     (void)SDL_RenderCoordinatesFromWindow(renderer, x, y, &x, &y);
-    return {x, y};
+    int output_width = layout_width;
+    int output_height = layout_height;
+    (void)SDL_GetCurrentRenderOutputSize(renderer, &output_width, &output_height);
+    const float scale = std::min(static_cast<float>(output_width) / static_cast<float>(layout_width),
+                                 static_cast<float>(output_height) / static_cast<float>(layout_height));
+    const float left = (static_cast<float>(output_width) - static_cast<float>(layout_width) * scale) * 0.5F;
+    const float top = (static_cast<float>(output_height) - static_cast<float>(layout_height) * scale) * 0.5F;
+    return {(x - left) / scale, (y - top) / scale};
 }
 
 } // namespace
@@ -32,6 +41,10 @@ void pump_input(InputState& input, SDL_Renderer* renderer) {
             if (event.key.key == SDLK_LEFT || event.key.key == SDLK_A) input.left_pressed = true;
             if (event.key.key == SDLK_RIGHT || event.key.key == SDLK_D) input.right_pressed = true;
             if (event.key.key == SDLK_H) input.relocate_hq_pressed = true;
+            if (event.key.key == SDLK_1) input.dispatch_choice = 0;
+            if (event.key.key == SDLK_2) input.dispatch_choice = 1;
+            if (event.key.key == SDLK_3) input.dispatch_choice = 2;
+            if (event.key.key == SDLK_4) input.dispatch_choice = 3;
         }
         if (event.type == SDL_EVENT_MOUSE_MOTION) {
             input.pointer = logical_pointer(renderer, event.motion.x, event.motion.y);
@@ -42,9 +55,6 @@ void pump_input(InputState& input, SDL_Renderer* renderer) {
                 input.pointer_pressed = true;
                 input.pointer_down = true;
                 input.press_origin = input.pointer;
-            } else if (event.button.button == SDL_BUTTON_RIGHT) {
-                input.secondary_down = true;
-                input.secondary_origin = input.pointer;
             }
         }
         if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && !ImGui::GetIO().WantCaptureMouse) {
@@ -54,7 +64,6 @@ void pump_input(InputState& input, SDL_Renderer* renderer) {
                 input.pointer_down = false;
             } else if (event.button.button == SDL_BUTTON_RIGHT) {
                 input.secondary_released = true;
-                input.secondary_down = false;
             }
         }
         if (event.type == SDL_EVENT_MOUSE_WHEEL && !ImGui::GetIO().WantCaptureMouse) {
@@ -82,5 +91,6 @@ void consume_input(InputState& input) {
     input.pointer_released = false;
     input.secondary_released = false;
     input.relocate_hq_pressed = false;
+    input.dispatch_choice = -1;
     input.zoom_delta = 0.0F;
 }

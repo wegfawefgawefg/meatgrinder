@@ -14,6 +14,11 @@ NodeState* find_node(Match& match, int id) {
     return found == match.nodes.end() ? nullptr : &*found;
 }
 
+const NodeState* find_node(const Match& match, int id) {
+    const auto found = std::ranges::find(match.nodes, id, &NodeState::id);
+    return found == match.nodes.end() ? nullptr : &*found;
+}
+
 std::vector<int> path_between(const Level& level, int start, int goal) {
     constexpr int slot_count = 100;
     std::vector<int> previous(slot_count, -1);
@@ -106,10 +111,6 @@ void resolve_arrival(State& state, Army& army, int target_id, bool final) {
             army.soldiers = std::max(0.0F, survivors - 1.0F);
         }
         if (old_owner >= 0) ensure_headquarters(state.match, old_owner);
-        const Vec2 captured = node_world_position(
-            state.levels[static_cast<std::size_t>(state.campaign_level)], target_id);
-        state.camera.target_center.x = std::lerp(state.camera.target_center.x, captured.x, 0.22F);
-        state.camera.target_center.y = std::lerp(state.camera.target_center.y, captured.y, 0.22F);
     } else {
         target->soldiers = std::max(0.0F, target->soldiers - army.soldiers);
         if (army.owner == player_owner) state.match.stats.soldiers_lost += static_cast<int>(army.soldiers);
@@ -142,28 +143,12 @@ void step_armies(State& state) {
     std::erase_if(state.match.armies, [](const Army& army) { return army.soldiers <= 0.0F; });
 }
 
-int generated_soldiers(const Match& match, int owner, float scale) {
-    int owned = 0;
-    int mines = 0;
-    for (const NodeState& node : match.nodes) {
-        if (node.owner != owner) continue;
-        ++owned;
-        if (node.kind == NodeKind::mine) ++mines;
-    }
-    const int base = owned / 2 + 3;
-    return static_cast<int>(std::floor(static_cast<float>(base) *
-                                      (1.0F + 0.5F * static_cast<float>(mines)) * scale));
-}
-
 void run_generation(State& state) {
-    for (int owner : {player_owner, enemy_owner}) {
-        NodeState* headquarters = headquarters_for(state.match, owner);
-        if (headquarters == nullptr) continue;
-        const int recruits = generated_soldiers(state.match, owner, state.rules.generation_scale);
-        headquarters->soldiers += static_cast<float>(recruits);
-        const int rally_target = headquarters->rally_target;
-        if (rally_target >= 0 && rally_target != headquarters->id) {
-            (void)launch_army(state, *headquarters, rally_target, static_cast<float>(recruits), true);
+    for (NodeState& node : state.match.nodes) {
+        if (node.owner == neutral_owner) continue;
+        node.soldiers += 1.0F;
+        if (node.rally_target >= 0 && node.rally_target != node.id) {
+            (void)launch_army(state, node, node.rally_target, 1.0F, node.rally_assault);
         }
     }
     ++state.match.stats.generations;
@@ -176,31 +161,69 @@ void step_generation(State& state) {
     run_generation(state);
 }
 
+float route_defense(const Match& match, const std::vector<int>& path, int owner) {
+    float defense = 0.0F;
+    for (std::size_t index = 1; index < path.size(); ++index) {
+        const NodeState* node = find_node(match, path[index]);
+        if (node != nullptr && node->owner != owner) defense += node->soldiers + 1.0F;
+    }
+    return defense;
+}
+
 void step_enemy(State& state) {
     state.match.ai_clock += step_seconds;
-    if (state.match.ai_clock < state.rules.enemy_think_seconds) return;
+    float interval = state.rules.enemy_think_seconds;
+    float fraction = state.rules.enemy_aggression;
+    float minimum = 7.0F;
+    if (state.match.ai_style == AiStyle::aggressive) {
+        interval *= 0.70F;
+        fraction = std::max(fraction, 0.68F);
+        minimum = 5.0F;
+    } else if (state.match.ai_style == AiStyle::turtle) {
+        interval *= 1.65F;
+        fraction = 0.78F;
+        minimum = 14.0F;
+    } else if (state.match.ai_style == AiStyle::swarm) {
+        interval *= 0.48F;
+        fraction = 0.34F;
+        minimum = 3.0F;
+    }
+    if (state.match.ai_clock < interval) return;
     state.match.ai_clock = 0.0F;
     const Level& level = state.levels[static_cast<std::size_t>(state.campaign_level)];
     NodeState* best_source = nullptr;
     int best_target = -1;
     float best_score = -10000.0F;
     for (NodeState& source : state.match.nodes) {
-        if (source.owner != enemy_owner || source.soldiers < 7.0F) continue;
-        for (const Link& link : level.links) {
-            const int target_id = link.a == source.id ? link.b : link.b == source.id ? link.a : -1;
-            const NodeState* target = find_node(state.match, target_id);
-            if (target == nullptr || target->owner == enemy_owner) continue;
-            const float score = source.soldiers - target->soldiers * 1.3F +
-                                (target->owner == player_owner ? 8.0F : 0.0F);
+        if (source.owner != enemy_owner || source.soldiers < minimum) continue;
+        for (const NodeState& candidate : state.match.nodes) {
+            const NodeState* target = &candidate;
+            if (target->owner == enemy_owner) continue;
+            const std::vector<int> path = path_between(level, source.id, target->id);
+            if (path.size() < 2) continue;
+            const float committed = std::floor(source.soldiers * fraction);
+            const float defense = route_defense(state.match, path, enemy_owner);
+            if (state.match.ai_style == AiStyle::turtle && committed < defense * 1.25F) continue;
+            if (state.match.ai_style == AiStyle::balanced && committed < defense * 0.45F) continue;
+            if (state.match.ai_style == AiStyle::aggressive && committed < defense * 0.25F) continue;
+            float score = committed - defense * 1.35F - static_cast<float>(path.size()) * 1.7F;
+            if (target->owner == player_owner) score += 11.0F;
+            if (target->headquarters) score += state.match.ai_style == AiStyle::aggressive ? 42.0F : 24.0F;
+            if (state.match.ai_style == AiStyle::swarm) {
+                score = 18.0F - target->soldiers * 2.0F - static_cast<float>(path.size());
+                if (target->owner == player_owner) score += 6.0F;
+            } else if (state.match.ai_style == AiStyle::turtle) {
+                score += source.soldiers * 0.6F - defense;
+            }
             if (score > best_score) {
                 best_score = score;
                 best_source = &source;
-                best_target = target_id;
+                best_target = target->id;
             }
         }
     }
     if (best_source != nullptr) {
-        (void)send_army(state, best_source->id, best_target, state.rules.enemy_aggression);
+        (void)send_army(state, best_source->id, best_target, fraction, true);
     }
 }
 
@@ -217,6 +240,9 @@ void step_outcome(State& state) {
         return;
     }
     state.match.outcome_clock += step_seconds;
+    if (player_alive && !enemy_alive && state.match.outcome_clock <= step_seconds) {
+        state.camera.target_zoom = std::clamp(state.camera.target_zoom * 1.12F, 0.45F, 2.5F);
+    }
     if (state.match.outcome_clock < 0.8F) return;
     if (!player_alive) {
         change_mode(state, Mode::defeat);
@@ -329,6 +355,7 @@ void start_level(State& state, int level_index) {
     state.campaign_level = level_index;
     const Level& level = state.levels[static_cast<std::size_t>(level_index)];
     state.match = {};
+    state.match.ai_style = static_cast<AiStyle>(level_index % 4);
     state.match.nodes.reserve(level.nodes.size());
     for (const LevelNode& node : level.nodes) {
         state.match.nodes.push_back({
@@ -340,6 +367,7 @@ void start_level(State& state, int level_index) {
     }
     for (int owner : {player_owner, enemy_owner}) ensure_headquarters(state.match, owner);
     state.relocating_headquarters = false;
+    state.rally_source = -1;
     setup_camera(state, level);
     change_mode(state, Mode::level_card);
 }
@@ -368,20 +396,19 @@ bool relocate_headquarters(State& state, int node_id) {
     NodeState* old = headquarters_for(state.match, player_owner);
     if (node == nullptr || old == nullptr || node->owner != player_owner || node == old) return false;
     node->headquarters = true;
-    node->rally_target = old->rally_target;
     old->headquarters = false;
-    old->rally_target = -1;
     ++state.match.stats.headquarters_moves;
     return true;
 }
 
-bool set_rally_order(State& state, int source_id, int target_id) {
+bool set_rally_order(State& state, int source_id, int target_id, bool assault) {
     NodeState* source = find_node(state.match, source_id);
-    if (source == nullptr || !source->headquarters || source->owner != player_owner ||
-        target_id < 0 || source_id == target_id) return false;
+    if (source == nullptr || source->owner != player_owner || target_id < 0 ||
+        source_id == target_id) return false;
     const Level& level = state.levels[static_cast<std::size_t>(state.campaign_level)];
     if (find_path(level, source_id, target_id).size() < 2) return false;
     source->rally_target = target_id;
+    source->rally_assault = assault;
     return true;
 }
 
@@ -439,6 +466,16 @@ void handle_pointer_release(State& state) {
         if (relocate_headquarters(state, clicked)) state.relocating_headquarters = false;
         return;
     }
+    if (state.rally_source >= 0) {
+        NodeState* source = find_node(state.match, state.rally_source);
+        if (source != nullptr && clicked == source->id) {
+            source->rally_target = -1;
+        } else {
+            (void)set_rally_order(state, state.rally_source, clicked, !state.input.direct_down);
+        }
+        state.rally_source = -1;
+        return;
+    }
     const bool has_selection = std::ranges::any_of(state.match.nodes, &NodeState::selected);
     if (target != nullptr && target->owner == player_owner && !has_selection) {
         select_node(state, clicked, false);
@@ -450,7 +487,8 @@ void handle_pointer_release(State& state) {
             if (node.selected && node.id != clicked) sources.push_back(node.id);
         }
         for (int source : sources) {
-            (void)send_army(state, source, clicked, 0.5F, !state.input.direct_down);
+            (void)send_army(state, source, clicked, state.dispatch_fraction,
+                            !state.input.direct_down);
         }
         clear_selection(state);
         return;
@@ -460,26 +498,22 @@ void handle_pointer_release(State& state) {
 
 void handle_secondary_release(State& state) {
     if (state.mode != Mode::playing) return;
-    const float drag = std::hypot(state.input.pointer.x - state.input.secondary_origin.x,
-                                  state.input.pointer.y - state.input.secondary_origin.y);
-    if (drag <= 10.0F) {
-        NodeState* clicked = find_node(state.match, node_at_pointer(state, state.input.pointer));
-        if (clicked != nullptr && clicked->owner == player_owner && clicked->headquarters) {
-            clicked->rally_target = -1;
-        }
-        clear_selection(state);
-        return;
-    }
-    const int source_id = node_at_pointer(state, state.input.secondary_origin);
-    const int target_id = node_at_pointer(state, state.input.pointer);
-    (void)set_rally_order(state, source_id, target_id);
+    NodeState* source = find_node(state.match, node_at_pointer(state, state.input.pointer));
+    state.relocating_headquarters = false;
+    clear_selection(state);
+    state.rally_source = source != nullptr && source->owner == player_owner ? source->id : -1;
 }
 
 void step(State& state) {
     state.mode_seconds += step_seconds;
     if (state.mode == Mode::playing) step_camera(state);
+    if (state.input.dispatch_choice >= 0) {
+        constexpr float fractions[]{0.25F, 0.5F, 0.75F, 0.9F};
+        state.dispatch_fraction = fractions[state.input.dispatch_choice];
+    }
     if (state.input.relocate_hq_pressed && state.mode == Mode::playing) {
         state.relocating_headquarters = !state.relocating_headquarters;
+        state.rally_source = -1;
         clear_selection(state);
     }
     if (state.input.pointer_released) handle_pointer_release(state);
@@ -489,6 +523,11 @@ void step(State& state) {
         return;
     }
     if (state.input.back_pressed) {
+        if (state.relocating_headquarters || state.rally_source >= 0) {
+            state.relocating_headquarters = false;
+            state.rally_source = -1;
+            return;
+        }
         change_mode(state, Mode::paused);
         return;
     }

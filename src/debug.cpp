@@ -27,7 +27,6 @@ void draw_debug(State& state, SDL_Renderer* renderer) {
             ImGui::SeparatorText("Rules");
             ImGui::SliderFloat("Army speed", &state.rules.army_speed, 10.0F, 180.0F, "%.0f px/s");
             ImGui::SliderFloat("GEN interval", &state.rules.generation_seconds, 3.0F, 30.0F, "%.1f s");
-            ImGui::SliderFloat("GEN scale", &state.rules.generation_scale, 0.25F, 3.0F);
             ImGui::SliderFloat("AI interval", &state.rules.enemy_think_seconds, 0.15F, 4.0F, "%.2f s");
             ImGui::SliderFloat("AI dispatch", &state.rules.enemy_aggression, 0.1F, 0.9F);
             ImGui::SeparatorText("Match");
@@ -35,6 +34,8 @@ void draw_debug(State& state, SDL_Renderer* renderer) {
                                                state.match.generation_clock);
             ImGui::Text("Camera: %.0f, %.0f @ %.2f", state.camera.center.x,
                         state.camera.center.y, state.camera.zoom);
+            ImGui::Text("AI style: %d", static_cast<int>(state.match.ai_style));
+            ImGui::Text("Dispatch: %.0f%%", state.dispatch_fraction * 100.0F);
             if (ImGui::Button("Restart level")) restart_level(state);
             ImGui::SameLine();
             if (ImGui::Button("Win now")) {

@@ -26,6 +26,26 @@ void outline(SDL_Renderer* renderer, float x, float y, float w, float h) {
     (void)SDL_RenderRect(renderer, &rect);
 }
 
+void thick_outline(SDL_Renderer* renderer, float x, float y, float w, float h, int thickness) {
+    for (int inset = 0; inset < thickness; ++inset) {
+        const float value = static_cast<float>(inset);
+        outline(renderer, x + value, y + value, std::max(0.0F, w - value * 2.0F),
+                std::max(0.0F, h - value * 2.0F));
+    }
+}
+
+void thick_line(SDL_Renderer* renderer, Vec2 a, Vec2 b, float thickness) {
+    const float length = std::max(1.0F, std::hypot(b.x - a.x, b.y - a.y));
+    const Vec2 normal{-(b.y - a.y) / length, (b.x - a.x) / length};
+    const int lines = std::max(1, static_cast<int>(std::ceil(thickness)));
+    const float start = -static_cast<float>(lines - 1) * 0.5F;
+    for (int index = 0; index < lines; ++index) {
+        const float offset = start + static_cast<float>(index);
+        (void)SDL_RenderLine(renderer, a.x + normal.x * offset, a.y + normal.y * offset,
+                             b.x + normal.x * offset, b.y + normal.y * offset);
+    }
+}
+
 void text(SDL_Renderer* renderer, float x, float y, std::string_view value, float scale = 2.0F) {
     (void)SDL_SetRenderScale(renderer, scale, scale);
     (void)SDL_RenderDebugText(renderer, x / scale, y / scale, std::string(value).c_str());
@@ -56,6 +76,16 @@ const char* kind_mark(NodeKind kind) {
     case NodeKind::route: return "+";
     }
     return "+";
+}
+
+const char* ai_style_name(AiStyle style) {
+    switch (style) {
+    case AiStyle::balanced: return "BALANCED";
+    case AiStyle::aggressive: return "AGGRESSIVE";
+    case AiStyle::turtle: return "TURTLE";
+    case AiStyle::swarm: return "SWARM";
+    }
+    return "BALANCED";
 }
 
 void owner_color(SDL_Renderer* renderer, int owner, bool muted = false) {
@@ -89,8 +119,7 @@ void draw_routes(SDL_Renderer* renderer, const Level& level, Vec2 center, float 
     for (const Link& link : level.links) {
         const Vec2 a = world_to_screen(node_world_position(level, link.a), center, zoom);
         const Vec2 b = world_to_screen(node_world_position(level, link.b), center, zoom);
-        (void)SDL_RenderLine(renderer, a.x, a.y, b.x, b.y);
-        (void)SDL_RenderLine(renderer, a.x + 1.0F, a.y, b.x + 1.0F, b.y);
+        thick_line(renderer, a, b, 2.0F);
     }
 }
 
@@ -98,15 +127,19 @@ void draw_rallies(SDL_Renderer* renderer, const Level& level, const Match& match
                   float zoom) {
     color(renderer, 87, 205, 207);
     for (const NodeState& node : match.nodes) {
-        if (!node.headquarters || node.rally_target < 0) continue;
+        if (node.rally_target < 0) continue;
+        if (node.rally_assault) color(renderer, 87, 205, 207);
+        else color(renderer, 239, 157, 77);
         const std::vector<int> path = find_path(level, node.id, node.rally_target);
         for (std::size_t index = 1; index < path.size(); ++index) {
             const Vec2 a = world_to_screen(node_world_position(level, path[index - 1]), center, zoom);
             const Vec2 b = world_to_screen(node_world_position(level, path[index]), center, zoom);
-            (void)SDL_RenderLine(renderer, a.x, a.y, b.x, b.y);
+            thick_line(renderer, a, b, 3.0F);
             const Vec2 mid{std::lerp(a.x, b.x, 0.58F), std::lerp(a.y, b.y, 0.58F)};
             fill(renderer, mid.x - 3.0F, mid.y - 3.0F, 6.0F, 6.0F);
         }
+        const Vec2 source = world_to_screen(node_world_position(level, node.id), center, zoom);
+        text(renderer, source.x - 4.0F, source.y + 24.0F, node.rally_assault ? "R" : "D", 1.0F);
     }
 }
 
@@ -123,8 +156,8 @@ void draw_nodes(SDL_Renderer* renderer, const Level& level, const Match& match, 
         outline(renderer, point.x - size * 0.5F, point.y - size * 0.4F, size, size * 0.8F);
         if (node.selected) {
             color(renderer, 255, 228, 113);
-            outline(renderer, point.x - size * 0.65F, point.y - size * 0.55F, size * 1.3F,
-                    size * 1.1F);
+            thick_outline(renderer, point.x - size * 0.65F, point.y - size * 0.55F, size * 1.3F,
+                          size * 1.1F, 3);
         }
         color(renderer, 242, 236, 212);
         text(renderer, point.x - size * 0.38F, point.y - 6.0F * font_scale, kind_mark(node.kind),
@@ -173,6 +206,12 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
                   state.campaign_level + 1, static_cast<int>(state.match.stats.elapsed_seconds) / 60,
                   static_cast<int>(state.match.stats.elapsed_seconds) % 60, state.campaign_score);
     text(renderer, 24.0F, 18.0F, status, 1.5F);
+    std::snprintf(status, sizeof(status), "ENEMY %s", ai_style_name(state.match.ai_style));
+    text(renderer, 515.0F, 22.0F, status, 1.0F);
+    char commitment[32];
+    std::snprintf(commitment, sizeof(commitment), "SEND %d%%",
+                  static_cast<int>(state.dispatch_fraction * 100.0F));
+    text(renderer, 740.0F, 22.0F, commitment, 1.0F);
     const float generation_left = std::max(0.0F, state.rules.generation_seconds -
                                                     state.match.generation_clock);
     const float generation_fraction = 1.0F - generation_left / state.rules.generation_seconds;
@@ -185,20 +224,17 @@ void draw_playing(SDL_Renderer* renderer, const State& state, float alpha) {
     std::snprintf(generation, sizeof(generation), "NEXT GEN %.1fs", generation_left);
     text(renderer, 1055.0F, 22.0F, generation, 1.0F);
     const char* help = state.relocating_headquarters
-                           ? "RELOCATE HQ: CLICK AN OWNED BASE  |  H CANCELS"
-                           : "CLICK: ASSAULT  |  CTRL-CLICK: DIRECT  |  RIGHT-DRAG HQ: RALLY  |  H: RELOCATE HQ";
+                           ? "RELOCATE HQ: CLICK OWNED BASE  |  ESC CANCELS"
+                           : state.rally_source >= 0
+                                 ? "RALLY: CLICK TARGET  |  CTRL=DIRECT  |  CLICK SOURCE=CLEAR  |  ESC CANCELS"
+                                 : "CLICK: ASSAULT  |  CTRL: DIRECT  |  RIGHT-CLICK: RALLY  |  1-4: SEND SIZE  |  H: HQ";
     text(renderer, 24.0F, 690.0F, help, 1.0F);
     if (state.input.pointer_down) {
         color(renderer, 255, 228, 113);
         const Vec2 a = state.input.press_origin;
         const Vec2 b = state.input.pointer;
-        outline(renderer, std::min(a.x, b.x), std::min(a.y, b.y), std::abs(a.x - b.x),
-                std::abs(a.y - b.y));
-    }
-    if (state.input.secondary_down) {
-        color(renderer, 87, 205, 207);
-        (void)SDL_RenderLine(renderer, state.input.secondary_origin.x, state.input.secondary_origin.y,
-                             state.input.pointer.x, state.input.pointer.y);
+        thick_outline(renderer, std::min(a.x, b.x), std::min(a.y, b.y), std::abs(a.x - b.x),
+                      std::abs(a.y - b.y), 3);
     }
 }
 
