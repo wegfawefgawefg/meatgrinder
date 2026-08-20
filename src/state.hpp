@@ -18,6 +18,15 @@ struct Vec2 {
     float y{};
 };
 
+struct Camera {
+    Vec2 previous_center{};
+    Vec2 center{};
+    Vec2 target_center{};
+    float previous_zoom{1.0F};
+    float zoom{1.0F};
+    float target_zoom{1.0F};
+};
+
 enum class Mode {
     main_menu,
     options,
@@ -66,9 +75,9 @@ struct NodeState {
     NodeKind kind{};
     int owner{neutral_owner};
     float soldiers{};
-    int tier{1};
-    float production_clock{};
     bool selected{};
+    bool headquarters{};
+    int rally_target{-1};
 };
 
 struct Army {
@@ -78,6 +87,7 @@ struct Army {
     int leg{};
     float previous_progress{};
     float progress{};
+    bool assault{true};
 };
 
 struct MatchStats {
@@ -86,7 +96,8 @@ struct MatchStats {
     int soldiers_sent{};
     int soldiers_lost{};
     int nodes_captured{};
-    int promotions{};
+    int generations{};
+    int headquarters_moves{};
 };
 
 struct Match {
@@ -94,6 +105,7 @@ struct Match {
     std::vector<Army> armies;
     MatchStats stats;
     float ai_clock{};
+    float generation_clock{};
     float outcome_clock{};
 };
 
@@ -110,18 +122,26 @@ struct InputState {
     bool pointer_pressed{};
     bool pointer_released{};
     bool pointer_down{};
-    bool secondary_pressed{};
-    bool modifier_down{};
+    bool secondary_released{};
+    bool secondary_down{};
+    bool direct_down{};
+    bool relocate_hq_pressed{};
+    bool pan_up{};
+    bool pan_down{};
+    bool pan_left{};
+    bool pan_right{};
+    float zoom_delta{};
     Vec2 pointer{};
     Vec2 press_origin{};
+    Vec2 secondary_origin{};
 };
 
 struct Rules {
-    float army_speed{150.0F};
-    float production_scale{1.0F};
+    float army_speed{40.0F};
+    float generation_seconds{10.0F};
+    float generation_scale{1.0F};
     float enemy_think_seconds{1.15F};
     float enemy_aggression{0.48F};
-    int promotion_cost{20};
 };
 
 struct State {
@@ -130,6 +150,7 @@ struct State {
     Match match;
     InputState input;
     Rules rules;
+    Camera camera;
     std::mt19937 random{0x4d454154U};
     int campaign_level{};
     int menu_choice{};
@@ -139,6 +160,5 @@ struct State {
     float mode_seconds{};
     bool fullscreen{};
     bool debug_open{};
-    bool paused_from_play{};
+    bool relocating_headquarters{};
 };
-

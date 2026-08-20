@@ -20,4 +20,3 @@ Run `./scripts/test.sh` before committing gameplay changes. Never add source
 IPA files, extracted HRR assets, dialogue, audio, or executable material to this
 repository. Level imports stay limited to the provenance-tracked topology fields
 documented in `docs/LEVELS.md`.
-

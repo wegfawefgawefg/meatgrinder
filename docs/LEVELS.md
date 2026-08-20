@@ -19,3 +19,7 @@ The schema is intentionally readable. A level has `name`, `source`, `tiles`,
 notes can still refer back to recovered records without leaking runtime identity
 into array positions.
 
+The recovered base records do not contain the scenario-selected headquarters.
+Until scenario opcodes supply that field, Meatgrinder deterministically assigns
+the first occupied node for each side at match creation. This is an explicit
+prototype assumption, not claimed original data.

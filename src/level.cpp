@@ -99,11 +99,11 @@ int node_position(const Level& level, int id) {
     return found == level.nodes.end() ? -1 : static_cast<int>(found - level.nodes.begin());
 }
 
-Vec2 node_screen_position(const Level& level, int id) {
+Vec2 node_world_position(const Level& level, int id) {
     const int position = node_position(level, id);
     if (position < 0) return {};
     const LevelNode& node = level.nodes[static_cast<std::size_t>(position)];
-    return {120.0F + static_cast<float>(node.x) * 115.0F,
-            95.0F + static_cast<float>(node.y) * 58.0F};
+    constexpr float tile_size = 64.0F;
+    return {(static_cast<float>(node.x) * 2.0F + 0.5F) * tile_size,
+            (static_cast<float>(node.y) + 1.5F) * tile_size};
 }
-

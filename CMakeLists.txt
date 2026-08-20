@@ -54,6 +54,7 @@ if(NOT EXISTS "${MG_IMGUI_DIR}/imgui.cpp")
 endif()
 
 add_library(meatgrinder_core
+    src/camera.cpp
     src/game.cpp
     src/level.cpp)
 target_include_directories(meatgrinder_core PUBLIC src)
