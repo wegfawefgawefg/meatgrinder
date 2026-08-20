@@ -205,11 +205,16 @@ void draw_node_shape(SDL_Renderer* renderer, const NodeState& node, Vec2 point, 
     if (node.kind == NodeKind::node) {
         fill(renderer, point.x - size * 0.34F, point.y - size * 0.34F, size * 0.68F, size * 0.68F);
     } else if (node.kind == NodeKind::producer) {
-        fill(renderer, left, top, size, size * 0.8F);
-        for (int tooth = 0; tooth < 3; ++tooth) {
-            fill(renderer, left + static_cast<float>(tooth) * size * 0.38F, top - size * 0.16F,
-                 size * 0.24F, size * 0.18F);
-        }
+        fill(renderer, left, top + size * 0.06F, size, size * 0.74F);
+        owner_color(renderer, node.owner);
+        thick_line(renderer, {left - size * 0.06F, top + size * 0.07F},
+                   {left + size * 0.22F, top - size * 0.18F}, 3.0F);
+        thick_line(renderer, {left + size * 0.22F, top - size * 0.18F},
+                   {left + size * 1.06F, top + size * 0.07F}, 3.0F);
+        color(renderer, 35, 38, 35);
+        fill(renderer, left + size * 0.08F, top + size * 0.52F, size * 0.14F, size * 0.16F);
+        fill(renderer, left + size * 0.78F, top + size * 0.52F, size * 0.14F, size * 0.16F);
+        fill(renderer, left + size * 0.44F, top + size * 0.48F, size * 0.16F, size * 0.32F);
     } else if (node.kind == NodeKind::fort) {
         fill(renderer, left, top - size * 0.12F, size, size * 0.92F);
         fill(renderer, left - size * 0.14F, top - size * 0.25F, size * 0.28F, size * 1.05F);
