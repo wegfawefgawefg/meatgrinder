@@ -59,10 +59,10 @@ Enemy controllers evaluate full routes, accumulated defense, distance, player
 ownership, and headquarters value. Campaign levels rotate four personalities:
 balanced waits for efficient attacks, aggressive accepts attrition to pressure
 HQ, turtle accumulates a large favorable attack, and swarm repeatedly sends
-small packets at nearby weak points. Logistics candidates identify useful
-frontline staging bases and transfer surplus from rear territory along entirely
-friendly routes. Troops already in transit count toward staging requirements,
-preventing blind over-supply.
+single-soldier packets while keeping one defender. Logistics candidates
+identify useful frontline staging bases and transfer surplus from rear
+territory along entirely friendly routes. Troops already in transit count
+toward staging requirements, preventing blind over-supply.
 
 Each decision evaluates every node and builds attack, expansion, reinforcement,
 and wait candidates. Personality weights choose the kind of action; difficulty

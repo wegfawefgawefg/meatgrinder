@@ -51,6 +51,14 @@ int main() {
     assert(state.worlds.size() == 6);
     assert(state.levels.size() == 30);
     assert(state.levels.front().nodes.size() == 5);
+    const Level& relay = state.levels[3];
+    assert(relay.nodes.size() == 5);
+    assert(relay.nodes[0].kind == NodeKind::producer);
+    assert(relay.nodes[1].kind == NodeKind::fort);
+    assert(relay.nodes[2].kind == NodeKind::node);
+    assert(relay.nodes[2].owner == neutral_owner);
+    assert(relay.nodes[3].kind == NodeKind::fort);
+    assert(relay.nodes[4].kind == NodeKind::producer);
     assert(level_available(state, 0));
     assert(!level_available(state, 1));
     assert(world_available(state, 0));
@@ -395,6 +403,26 @@ int main() {
     assert(std::ranges::any_of(state.match.armies, [](const Army& army) {
         return army.owner == enemy_owner;
     }));
+    assert(std::ranges::all_of(state.match.armies, [](const Army& army) {
+        return army.owner != enemy_owner || army.soldiers == 1.0F;
+    }));
+
+    restart_level(state);
+    state.match.armies.clear();
+    int swarm_source = -1;
+    for (NodeState& node : state.match.nodes) {
+        if (node.owner != enemy_owner) continue;
+        node.soldiers = 1.0F;
+        if (swarm_source < 0) swarm_source = node.id;
+    }
+    assert(swarm_source >= 0);
+    match_node(state, swarm_source).soldiers = 2.0F;
+    for (int decision = 0; decision < 20 && state.match.armies.empty(); ++decision) {
+        run_enemy_decision(state);
+    }
+    assert(!state.match.armies.empty());
+    assert(state.match.armies.front().soldiers == 1.0F);
+    assert(match_node(state, swarm_source).soldiers == 1.0F);
 
     // verify a stalled AI moves rear surplus into a friendly frontline base
     start_level(state, 0);

@@ -90,8 +90,8 @@ def world_one():
     links = [[0, 1], [0, 2], [1, 3], [2, 3], [3, 4], [3, 5], [4, 6], [5, 6]]
     levels.append(level(0, 3, "TWO HANDS", "SELECT TOGETHER. SEND TOGETHER.", nodes, links))
 
-    nodes, links = line_map(["producer", "producer", "node", "node", "producer", "producer"],
-                            [0, 0, -1, -1, 1, 1], [8, 4, 0, 0, 4, 8])
+    nodes, links = line_map(["producer", "fort", "node", "fort", "producer"],
+                            [0, 0, -1, 1, 1], [8, 4, 0, 4, 8])
     levels.append(level(0, 4, "THE RELAY", "RALLY RECRUITS TOWARD THE FRONT.", nodes, links))
 
     nodes = [headquarters(0, 1, 4, 0), node(1, 2, 2, "producer", 0, 3), node(2, 2, 6),

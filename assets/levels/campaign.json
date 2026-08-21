@@ -397,7 +397,7 @@
           "id": 1,
           "x": 2,
           "y": 4,
-          "kind": "producer",
+          "kind": "fort",
           "owner": 0,
           "soldiers": 4
         },
@@ -413,21 +413,13 @@
           "id": 3,
           "x": 4,
           "y": 4,
-          "kind": "node",
-          "owner": -1,
-          "soldiers": 0
-        },
-        {
-          "id": 4,
-          "x": 5,
-          "y": 4,
-          "kind": "producer",
+          "kind": "fort",
           "owner": 1,
           "soldiers": 4
         },
         {
-          "id": 5,
-          "x": 6,
+          "id": 4,
+          "x": 5,
           "y": 4,
           "kind": "producer",
           "owner": 1,
@@ -451,10 +443,6 @@
         [
           3,
           4
-        ],
-        [
-          4,
-          5
         ]
       ],
       "sea_links": []

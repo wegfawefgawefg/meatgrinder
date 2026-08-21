@@ -88,14 +88,14 @@ float attack_fraction(const State& state) {
 float minimum_force(AiStyle style) {
     if (style == AiStyle::aggressive) return 5.0F;
     if (style == AiStyle::turtle) return 14.0F;
-    if (style == AiStyle::swarm) return 3.0F;
+    if (style == AiStyle::swarm) return 2.0F;
     return 7.0F;
 }
 
 float rear_reserve(AiStyle style) {
     if (style == AiStyle::aggressive) return 3.0F;
     if (style == AiStyle::turtle) return 12.0F;
-    if (style == AiStyle::swarm) return 2.0F;
+    if (style == AiStyle::swarm) return 1.0F;
     return 5.0F;
 }
 
@@ -196,7 +196,9 @@ std::vector<Action> attack_actions(const State& state, const std::vector<int>& u
             if (target.owner == enemy_owner) continue;
             std::vector<int> path = find_route(state, enemy_owner, source.id, target.id);
             if (path.size() < 2) continue;
-            const float committed = std::floor(source.soldiers * fraction);
+            const float committed = state.match.ai_style == AiStyle::swarm
+                ? 1.0F
+                : std::floor(source.soldiers * fraction);
             const float defense = route_defense(state, path, enemy_owner);
             if (!viable_attack(state.match.ai_style, committed, defense)) continue;
             float score = committed - defense * 1.35F -
@@ -261,8 +263,9 @@ std::vector<Action> reinforce_actions(const State& state, const std::vector<int>
             std::vector<int> path = friendly_path(level, state.match, enemy_owner, donor.id,
                                                   staging.id);
             if (path.size() < 2) continue;
-            const float soldiers = std::min(std::floor(donor.soldiers - reserve),
-                                            std::ceil(need));
+            const float soldiers = state.match.ai_style == AiStyle::swarm
+                ? 1.0F
+                : std::min(std::floor(donor.soldiers - reserve), std::ceil(need));
             float score = opportunity + soldiers * 0.2F -
                           static_cast<float>(path.size()) * 1.5F;
             if (objective == state.match.ai.objective) score += 18.0F;
